@@ -25,6 +25,9 @@ O dashboard apresenta:
 - Distribuição por sexo, horário, estado de saúde, entre outros
 - Comparativos por ano e condições climáticas
 
+Link para o dashboard:
+- https://sonael.github.io/Analise_Dados_Acidentes/dashboard.html
+
 ## 📌 Objetivo do Estudo
 
 Investigar se existe uma **correlação entre a ocorrência de acidentes graves com ciclistas** e a **ausência de infraestrutura cicloviária protegida** em horários de maior fluxo de veículos em Recife.
