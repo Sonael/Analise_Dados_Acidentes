@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Acidentes de Bicicleta em Recife</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        
+        .fonte {
+            font-size: 12px;
+            text-align: center;
+            margin-top: 20px;
+            color: #555;
+        }
+
+        a {
+            color: #3498db;
+            text-decoration: none;
+        }
+        
+        .header {
+            background-color: #2c3e50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .card {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 15px;
+        }
+        
+        .card-header {
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+        
+        .full-width {
+            grid-column: 1 / -1;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 20px;
+            background-color: #2c3e50;
+            color: white;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Dashboard de Acidentes de Bicicleta em Recife</h1>
+        <p>Análise de dados de acidentes envolvendo ciclistas</p>
+        <p>Sonael de Albuquerque Angelos Neto | Eduardo Felipe da Silva</p>
+    </div>
+    
+    <div class="container">
+        <!-- Gráfico 1: Frequência de acidentes por hora do dia -->
+        <div class="card">
+            <div class="card-header">Frequência de Acidentes por Hora do Dia</div>
+            <div class="chart-container">
+                <canvas id="horarioChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- Gráfico 2: Top 10 causas mais comuns -->
+        <div class="card">
+            <div class="card-header">Top 10 Causas de Acidentes</div>
+            <div class="chart-container">
+                <canvas id="causasChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- Gráfico 3: Evolução anual -->
+        <div class="card full-width">
+            <div class="card-header">Evolução do Número de Acidentes por Ano</div>
+            <div class="chart-container">
+                <canvas id="evolucaoChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- Gráfico 4: Top 10 tipos de acidentes -->
+        <div class="card">
+            <div class="card-header">Tipos de Acidentes Mais Frequentes</div>
+            <div class="chart-container">
+                <canvas id="tiposChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- Gráfico 5: Sexo por ano -->
+        <div class="card">
+            <div class="card-header">Envolvidos em Acidentes por Sexo e Ano</div>
+            <div class="chart-container">
+                <canvas id="sexoChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- Gráfico 6: Estado de saúde -->
+        <div class="card">
+            <div class="card-header">Estado de Saúde Após o Acidente</div>
+            <div class="chart-container">
+                <canvas id="saudeChart"></canvas>
+            </div>
+        </div>
+        
+        <!-- Gráfico 7: Condições meteorológicas -->
+        <div class="card">
+            <div class="card-header">Condições Meteorológicas</div>
+            <div class="chart-container">
+                <canvas id="meteorologiaChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <p class="fonte"> Fonte: <a  href="https://www.gov.br/prf/pt-br/acesso-a-informacao/dados-abertos/dados-abertos-da-prf">https://www.gov.br/prf/pt-br/acesso-a-informacao/dados-abertos/dados-abertos-da-prf</a></p>
+    
+    <div class="footer">
+        <p>Dados de acidentes de bicicleta em Recife | Análise e visualização</p>
+    </div>
+
+    <script>
+        // Dados processados do dataset (simulados para o exemplo)
+        // Na prática, esses dados seriam extraídos do CSV
+        
+        // Gráfico 1: Frequência por hora do dia
+        const horas = Array.from({length: 24}, (_, i) => i + ':00');
+        const acidentesPorHora = [0, 2, 0, 13, 5, 9, 8, 40, 22, 2, 10, 7, 11, 
+                                10, 14, 7, 24, 57, 12, 25, 5, 4, 2, 10];
+        
+        // Gráfico 2: Top 10 causas
+        const causas = [
+            "Acessar via sem observar outros veículos",
+            "Reação tardia do condutor",
+            "Transitar na contramão",
+            "Falta de atenção à condução",
+            "Desobediência às normas",
+            "Ausência de reação do contudor",
+            "Velocidade incompatível",
+            "Ingestão de álcool",
+            "Deficiência de iluminação",
+            "Condutor deixou de manter distância do veículo da frente",
+            
+            
+        ];
+        const contagemCausas = [93, 23, 23, 20, 12, 10, 9, 8, 8, 7];
+        
+        // Gráfico 3: Evolução anual
+        const anos = ['2020', '2021', '2022', '2023', '2024', '2025'];
+        const acidentesPorAno = [50, 44, 45, 48, 81, 37];
+        
+        // Gráfico 4: Tipos de acidentes
+        const tiposAcidentes = [
+            "Colisão transversal",
+            "Queda de ocupante",
+            "Tombamento",
+            "Colisão traseira",
+            "Colisão lateral mesmo sentido",
+            "Colisão frontal",
+            "Atropelamento de pedestre",
+            "Colisão lateral sentido oposto",
+            "Colisão lateral",
+            "Eventos atípicos",
+            
+        ];
+        const contagemTipos = [92, 83, 49, 29, 13, 11, 9, 3, 3, 2];
+        
+        // Gráfico 5: Sexo por ano
+        const homensPorAno = [49, 41, 30, 39, 70, 36];
+        const mulheresPorAno = [0, 0, 3, 8, 9, 0];
+        const nao_informadoPorAno = [0, 2, 11, 1, 1, 0];
+        
+        // Gráfico 6: Estado de saúde
+        const estadosSaude = ["Lesão Leves", "Óbito", "lesão Graves", "Não Informado", "Ileso"];
+        const contagemSaude = [146, 28, 30.1, 15, 20];
+        
+        // Gráfico 7: Condições meteorológicas
+        const condicoesMeteo = ["Céu Claro", "Nublado", "Chuva", "Sol", "Garoa/chuvisco"];
+        const contagemMeteo = [177, 89, 19, 11, 3];
+        
+        // Cores para os gráficos
+        const colors = [
+            'rgba(54, 162, 235, 0.7)',
+            'rgba(255, 99, 132, 0.7)',
+            'rgba(75, 192, 192, 0.7)',
+            'rgba(255, 159, 64, 0.7)',
+            'rgba(153, 102, 255, 0.7)',
+            'rgba(255, 205, 86, 0.7)',
+            'rgba(201, 203, 207, 0.7)',
+            'rgba(54, 162, 235, 0.5)',
+            'rgba(255, 99, 132, 0.5)',
+            'rgba(75, 192, 192, 0.5)'
+        ];
+        
+        // Configuração dos gráficos
+        
+        // Gráfico 1: Frequência por hora
+        const horarioCtx = document.getElementById('horarioChart').getContext('2d');
+        new Chart(horarioCtx, {
+            type: 'bar',
+            data: {
+                labels: horas,
+                datasets: [{
+                    label: 'Número de Acidentes',
+                    data: acidentesPorHora,
+                    backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Número de Acidentes'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Hora do Dia'
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `${context.parsed.y} acidentes`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Gráfico 2: Top 10 causas
+        const causasCtx = document.getElementById('causasChart').getContext('2d');
+        new Chart(causasCtx, {
+            type: 'bar',
+            data: {
+                labels: causas,
+                datasets: [{
+                    label: 'Número de Ocorrências',
+                    data: contagemCausas,
+                    backgroundColor: colors.slice(0, 10),
+                    borderColor: colors.map(c => c.replace('0.7', '1')),
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Número de Ocorrências'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `${context.parsed.x} ocorrências`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Gráfico 3: Evolução anual
+        const evolucaoCtx = document.getElementById('evolucaoChart').getContext('2d');
+        new Chart(evolucaoCtx, {
+            type: 'line',
+            data: {
+                labels: anos,
+                datasets: [{
+                    label: 'Número de Acidentes',
+                    data: acidentesPorAno,
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 2,
+                    tension: 0.1,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Número de Acidentes'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Ano'
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `${context.parsed.y} acidentes em ${context.label}`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Gráfico 4: Tipos de acidentes
+        const tiposCtx = document.getElementById('tiposChart').getContext('2d');
+        new Chart(tiposCtx, {
+            type: 'bar',
+            data: {
+                labels: tiposAcidentes,
+                datasets: [{
+                    label: 'Número de Ocorrências',
+                    data: contagemTipos,
+                    backgroundColor: colors.slice(0, 10),
+                    borderColor: colors.map(c => c.replace('0.7', '1')),
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Número de Ocorrências'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `${context.parsed.y} ocorrências`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Gráfico 5: Sexo por ano
+        const sexoCtx = document.getElementById('sexoChart').getContext('2d');
+        new Chart(sexoCtx, {
+            type: 'bar',
+            data: {
+                labels: anos,
+                datasets: [
+
+                    {
+                        label: 'Mulheres',
+                        data: mulheresPorAno,
+                        backgroundColor: 'rgba(255, 99, 132, 0.7)',
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        borderWidth: 1
+                    },
+                                        {
+                        label: 'Homens',
+                        data: homensPorAno,
+                        backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    },
+                    
+                    {
+                        label: 'Não Informado',
+                        data: nao_informadoPorAno,
+                        backgroundColor: 'rgba(75, 192, 192, 0.7)',
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        borderWidth: 1
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Número de Pessoas'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Ano'
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `${context.dataset.label}: ${context.parsed.y}`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Gráfico 6: Estado de saúde
+        const saudeCtx = document.getElementById('saudeChart').getContext('2d');
+        new Chart(saudeCtx, {
+            type: 'pie',
+            data: {
+                labels: estadosSaude,
+                datasets: [{
+                    data: contagemSaude,
+                    backgroundColor: [
+                        'rgba(75, 192, 192, 0.7)',
+                        'rgba(54, 162, 235, 0.7)',
+                        'rgba(255, 159, 64, 0.7)',
+                        'rgba(255, 99, 132, 0.7)',
+                        'rgba(13, 80, 143, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(75, 192, 192, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 159, 64, 1)',
+                        'rgba(255, 99, 132, 1)',
+                        'rgba(13, 80, 143, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const value = context.raw;
+                                const percentage = Math.round((value / total) * 100);
+                                return `${context.label}: ${value} (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Gráfico 7: Condições meteorológicas
+        const meteoCtx = document.getElementById('meteorologiaChart').getContext('2d');
+        new Chart(meteoCtx, {
+            type: 'pie',
+            data: {
+                labels: condicoesMeteo,
+                datasets: [{
+                    data: contagemMeteo,
+                    backgroundColor: [
+                        'rgba(255, 205, 86, 0.7)',
+                        'rgba(201, 203, 207, 0.7)',
+                        'rgba(54, 162, 235, 0.7)',
+                        'rgba(255, 159, 64, 0.7)',
+                        'rgba(153, 102, 255, 0.7)'
+                    ],
+                    borderColor: [
+                        'rgba(255, 205, 86, 1)',
+                        'rgba(201, 203, 207, 1)',
+                        'rgba(54, 162, 235, 1)',
+                        'rgba(255, 159, 64, 1)',
+                        'rgba(153, 102, 255, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const value = context.raw;
+                                const percentage = Math.round((value / total) * 100);
+                                return `${context.label}: ${value} (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
