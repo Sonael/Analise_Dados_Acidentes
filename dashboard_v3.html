@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Acidentes com Ciclistas em Recife (Dados Embutidos)</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #1e3a8a;
+            --secondary-color: #3b82f6;
+            --accent-color: #f59e0b;
+            --danger-color: #dc2626;
+            --success-color: #16a34a;
+            --background-color: #f8fafc;
+            --sidebar-width: 80px;
+            --sidebar-expanded-width: 240px;
+            --header-height: 60px;
+            --card-bg: #ffffff;
+            --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --border-color: #e2e8f0;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-primary);
+            overflow-x: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: var(--sidebar-width);
+            background-color: var(--primary-color);
+            color: white;
+            transition: width 0.3s ease;
+            overflow: hidden;
+            z-index: 1000;
+        }
+
+        .sidebar:hover {
+            width: var(--sidebar-expanded-width);
+        }
+
+        .sidebar-header {
+            padding: 20px 10px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .sidebar-header img {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin-bottom: 10px;
+        }
+
+        .sidebar-header h3 {
+            white-space: nowrap;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .sidebar:hover .sidebar-header h3 {
+            opacity: 1;
+        }
+
+        .sidebar-menu {
+            padding: 20px 0;
+        }
+
+        .menu-item {
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .menu-item:hover, .menu-item.active {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .menu-item i {
+            font-size: 20px;
+            min-width: 40px;
+            text-align: center;
+        }
+
+        .menu-item span {
+            margin-left: 10px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .sidebar:hover .menu-item span {
+            opacity: 1;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            padding: 20px;
+            transition: margin-left 0.3s ease;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .header h1 {
+            color: var(--primary-color);
+            font-size: 1.8rem;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .header-actions button {
+            background-color: var(--secondary-color);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* KPI Cards */
+        .kpi-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .kpi-card {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: var(--card-shadow);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .kpi-title {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+        }
+
+        .kpi-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        /* Chart Cards */
+        .chart-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .chart-card {
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: var(--card-shadow);
+        }
+
+        .chart-card.full-width {
+            grid-column: span 2;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .chart-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .chart-body {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+
+        /* Tab Content */
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .kpi-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .chart-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .chart-card.full-width {
+                grid-column: span 1;
+            }
+            
+            .sidebar {
+                width: 0;
+            }
+            
+            .sidebar.active {
+                width: var(--sidebar-width);
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+            
+            .menu-toggle {
+                display: block;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .kpi-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Menu Toggle for mobile */
+        .menu-toggle {
+            display: none;
+            background: none;
+            border: none;
+            color: var(--primary-color);
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        @media (max-width: 768px) {
+            .menu-toggle {
+                display: block;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <img src="https://via.placeholder.com/50/1e3a8a/ffffff?text=CR" alt="Logo">
+            <h3>Dashboard Ciclistas</h3>
+        </div>
+        <div class="sidebar-menu">
+            <div class="menu-item active" data-tab="visao-geral">
+                <i class="fas fa-home"></i>
+                <span>Visão Geral</span>
+            </div>
+            <div class="menu-item" data-tab="horarios">
+                <i class="fas fa-clock"></i>
+                <span>Horários</span>
+            </div>
+            <div class="menu-item" data-tab="perfil-acidentes">
+                <i class="fas fa-car-crash"></i>
+                <span>Perfil Acidentes</span>
+            </div>
+            <div class="menu-item" data-tab="vitimas">
+                <i class="fas fa-user-injured"></i>
+                <span>Vítimas</span>
+            </div>
+            <div class="menu-item" data-tab="tendencias">
+                <i class="fas fa-chart-line"></i>
+                <span>Tendências</span>
+            </div>
+            <!-- Filtros Tab Removed -->
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content" id="main-content">
+        <div class="header">
+            <button class="menu-toggle" id="menu-toggle">
+                <i class="fas fa-bars"></i>
+            </button>
+            <h1>Dashboard de Acidentes com Ciclistas em Recife (Dados Embutidos)</h1>
+            <div class="header-actions">
+                <button id="export-btn">
+                    <i class="fas fa-download"></i> Exportar
+                </button>
+            </div>
+        </div>
+
+        <!-- Visão Geral Tab -->
+        <div class="tab-content active" id="visao-geral">
+            <div class="kpi-container">
+                <div class="kpi-card">
+                    <div class="kpi-title">Total de Acidentes</div>
+                    <div class="kpi-value" id="kpi-total-acidentes">-</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-title">Lesões Graves</div>
+                    <div class="kpi-value" id="kpi-lesoes-graves">-</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-title">Óbitos</div>
+                    <div class="kpi-value" id="kpi-obitos">-</div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-title">Horário Crítico</div>
+                    <div class="kpi-value" id="kpi-horario-critico">-</div>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <div class="chart-title">Evolução Mensal de Acidentes</div>
+                    </div>
+                    <div class="chart-body">
+                        <canvas id="evolucaoMensalChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <div class="chart-title">Distribuição por Tipo de Acidente (Top 5)</div>
+                    </div>
+                    <div class="chart-body">
+                        <canvas id="tipoAcidenteChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="chart-container">
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <div class="chart-title">Distribuição por Estado Físico</div>
+                    </div>
+                    <div class="chart-body">
+                        <canvas id="estadoFisicoGeralChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <div class="chart-title">Distribuição por Dia da Semana</div>
+                    </div>
+                    <div class="chart-body">
+                        <canvas id="diaSemanaGeralChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Horários Tab -->
+        <div class="tab-content" id="horarios">
+            <div class="chart-container">
+                <div class="chart-card full-width">
+                    <div class="chart-header">
+                        <div class="chart-title">Distribuição por Hora do Dia</div>
+                    </div>
+                    <div class="chart-body">
+                        <canvas id="horasDiaChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="chart-container">
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <div class="chart-title">Distribuição por Fase do Dia</div>
+                    </div>
+                    <div class="chart-body">
+                        <canvas id="faseDiaChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <div class="chart-title">Distribuição por Dia da Semana</div>
+                    </div>
+                    <div class="chart-body">
+                        <canvas id="diaSemanaChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Perfil Acidentes Tab -->
+        <div class="tab-content" id="perfil-acidentes">
+            <div class="chart-container">
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <div class="chart-title">Distribuição por Tipo de Acidente</div>
+                    </div>
+                    <div class="chart-body">
+                        <canvas id="tipoAcidentePerfilChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <div class="chart-title">Distribuição por Causa do Acidente (Top 10)</div>
+                    </div>
+                    <div class="chart-body">
+                        <canvas id="causaAcidenteChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="chart-container">
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <div class="chart-title">Distribuição por Condição Meteorológica</div>
+                    </div>
+                    <div class="chart-body">
+                        <canvas id="condicaoMeteoChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <div class="chart-title">Distribuição por Tipo de Pista</div>
+                    </div>
+                    <div class="chart-body">
+                        <canvas id="tipoPistaChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Vítimas Tab -->
+        <div class="tab-content" id="vitimas">
+            <div class="chart-container">
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <div class="chart-title">Distribuição por Estado Físico</div>
+                    </div>
+                    <div class="chart-body">
+                        <canvas id="estadoFisicoVitimasChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <div class="chart-title">Distribuição por Sexo</div>
+                    </div>
+                    <div class="chart-body">
+                        <canvas id="sexoChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="chart-container">
+                <div class="chart-card full-width">
+                    <div class="chart-header">
+                        <div class="chart-title">Distribuição por Faixa Etária</div>
+                    </div>
+                    <div class="chart-body">
+                        <canvas id="idadeChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tendências Tab -->
+        <div class="tab-content" id="tendencias">
+            <div class="chart-container">
+                <div class="chart-card full-width">
+                    <div class="chart-header">
+                        <div class="chart-title">Evolução Anual de Acidentes</div>
+                    </div>
+                    <div class="chart-body">
+                        <canvas id="evolucaoAnualChart"></canvas>
+                    </div>
+                </div>
+            </div>
+            <div class="chart-container">
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <div class="chart-title">Distribuição Mensal (Média)</div>
+                    </div>
+                    <div class="chart-body">
+                        <canvas id="distribuicaoMensalChart"></canvas>
+                    </div>
+                </div>
+                <div class="chart-card">
+                    <div class="chart-header">
+                        <div class="chart-title">Comparativo Anual (Estado Físico)</div>
+                    </div>
+                    <div class="chart-body">
+                        <canvas id="comparativoAnualChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filtros Tab Removed -->
+
+    </div>
+
+    <script>
+        // EMBEDDED AGGREGATED DATA
+        const aggregatedData = {
+          "kpis": {
+            "total_acidentes": 299,
+            "lesoes_graves": 90,
+            "obitos": 28,
+            "horario_critico": "17",
+            "horario_critico_count": 57
+          },
+          "evolucao_mensal": [
+            {"mes": "2020-01", "contagem": 1}, {"mes": "2020-02", "contagem": 1}, {"mes": "2020-03", "contagem": 9}, {"mes": "2020-05", "contagem": 4}, {"mes": "2020-06", "contagem": 2}, {"mes": "2020-07", "contagem": 3}, {"mes": "2020-08", "contagem": 9}, {"mes": "2020-09", "contagem": 11}, {"mes": "2020-10", "contagem": 3}, {"mes": "2020-12", "contagem": 6}, {"mes": "2021-01", "contagem": 6}, {"mes": "2021-02", "contagem": 1}, {"mes": "2021-04", "contagem": 3}, {"mes": "2021-05", "contagem": 5}, {"mes": "2021-06", "contagem": 7}, {"mes": "2021-07", "contagem": 1}, {"mes": "2021-08", "contagem": 13}, {"mes": "2021-10", "contagem": 2}, {"mes": "2021-11", "contagem": 2}, {"mes": "2021-12", "contagem": 3}, {"mes": "2022-01", "contagem": 7}, {"mes": "2022-02", "contagem": 1}, {"mes": "2022-04", "contagem": 7}, {"mes": "2022-05", "contagem": 3}, {"mes": "2022-06", "contagem": 1}, {"mes": "2022-07", "contagem": 5}, {"mes": "2022-08", "contagem": 10}, {"mes": "2022-09", "contagem": 2}, {"mes": "2022-10", "contagem": 7}, {"mes": "2022-12", "contagem": 1}, {"mes": "2023-01", "contagem": 3}, {"mes": "2023-02", "contagem": 16}, {"mes": "2023-03", "contagem": 3}, {"mes": "2023-07", "contagem": 7}, {"mes": "2023-09", "contagem": 2}, {"mes": "2023-10", "contagem": 3}, {"mes": "2023-11", "contagem": 4}, {"mes": "2023-12", "contagem": 9}, {"mes": "2024-01", "contagem": 3}, {"mes": "2024-02", "contagem": 5}, {"mes": "2024-03", "contagem": 7}, {"mes": "2024-04", "contagem": 4}, {"mes": "2024-05", "contagem": 3}, {"mes": "2024-06", "contagem": 7}, {"mes": "2024-07", "contagem": 1}, {"mes": "2024-08", "contagem": 27}, {"mes": "2024-09", "contagem": 6}, {"mes": "2024-11", "contagem": 12}, {"mes": "2024-12", "contagem": 5}, {"mes": "2025-01", "contagem": 9}, {"mes": "2025-02", "contagem": 9}, {"mes": "2025-03", "contagem": 6}, {"mes": "2025-04", "contagem": 12}
+          ],
+          "tipo_acidente": [
+            {"tipo": "Colisão transversal", "contagem": 92}, {"tipo": "Queda de ocupante de veículo", "contagem": 83}, {"tipo": "Tombamento", "contagem": 49}, {"tipo": "Colisão traseira", "contagem": 29}, {"tipo": "Colisão lateral mesmo sentido", "contagem": 13}
+          ],
+          "estado_fisico": [
+            {"estado": "Lesões Leves", "contagem": 146}, {"estado": "Lesões Graves", "contagem": 90}, {"estado": "Óbito", "contagem": 28}, {"estado": "Ileso", "contagem": 20}, {"estado": "Não Informado", "contagem": 15}
+          ],
+          "dia_semana": [
+            {"dia": "segunda-feira", "contagem": 39, "ordem": 0}, {"dia": "terça-feira", "contagem": 67, "ordem": 1}, {"dia": "quarta-feira", "contagem": 29, "ordem": 2}, {"dia": "quinta-feira", "contagem": 49, "ordem": 3}, {"dia": "sexta-feira", "contagem": 37, "ordem": 4}, {"dia": "sábado", "contagem": 43, "ordem": 5}, {"dia": "domingo", "contagem": 35, "ordem": 6}
+          ],
+          "hora_dia": [
+            {"hora": "01", "contagem": 2}, {"hora": "03", "contagem": 13}, {"hora": "04", "contagem": 5}, {"hora": "05", "contagem": 9}, {"hora": "06", "contagem": 8}, {"hora": "07", "contagem": 40}, {"hora": "08", "contagem": 22}, {"hora": "09", "contagem": 2}, {"hora": "10", "contagem": 10}, {"hora": "11", "contagem": 7}, {"hora": "12", "contagem": 11}, {"hora": "13", "contagem": 10}, {"hora": "14", "contagem": 14}, {"hora": "15", "contagem": 7}, {"hora": "16", "contagem": 24}, {"hora": "17", "contagem": 57}, {"hora": "18", "contagem": 12}, {"hora": "19", "contagem": 25}, {"hora": "20", "contagem": 5}, {"hora": "21", "contagem": 4}, {"hora": "22", "contagem": 2}, {"hora": "23", "contagem": 10}
+          ],
+          "fase_dia": [
+            {"fase": "Pleno dia", "contagem": 156}, {"fase": "Plena Noite", "contagem": 87}, {"fase": "Anoitecer", "contagem": 47}, {"fase": "Amanhecer", "contagem": 9}
+          ],
+          "causa_acidente": [
+            {"causa": "Acessar a via sem observar a presença dos outros veículos", "contagem": 93}, {"causa": "Transitar na contramão", "contagem": 23}, {"causa": "Reação tardia ou ineficiente do condutor", "contagem": 23}, {"causa": "Falta de Atenção à Condução", "contagem": 20}, {"causa": "Desobediência às normas de trânsito pelo condutor", "contagem": 12}, {"causa": "Ausência de reação do condutor", "contagem": 10}, {"causa": "Velocidade Incompatível", "contagem": 9}, {"causa": "Ingestão de Álcool", "contagem": 8}, {"causa": "Iluminação deficiente", "contagem": 8}, {"causa": "Ingestão de álcool pelo condutor", "contagem": 7}
+          ],
+          "condicao_meteo": [
+            {"condicao": "Céu Claro", "contagem": 177}, {"condicao": "Nublado", "contagem": 89}, {"condicao": "Chuva", "contagem": 19}, {"condicao": "Sol", "contagem": 11}, {"condicao": "Garoa/Chuvisco", "contagem": 3}
+          ],
+          "tipo_pista": [
+            {"tipo": "Dupla", "contagem": 178}, {"tipo": "Múltipla", "contagem": 105}, {"tipo": "Simples", "contagem": 16}
+          ],
+          "sexo": [
+            {"sexo": "Masculino", "contagem": 264}, {"sexo": "Feminino", "contagem": 20}, {"sexo": "Não Informado", "contagem": 15}
+          ],
+          "faixa_etaria": [
+            {"faixa": "46-60", "contagem": 90}, {"faixa": "31-45", "contagem": 83}, {"faixa": "19-30", "contagem": 58}, {"faixa": "0-18", "contagem": 17}, {"faixa": "61+", "contagem": 16}, {"faixa": "Não Informado", "contagem": 35}
+          ],
+          "evolucao_anual": [
+            {"ano": "2020", "contagem": 49}, {"ano": "2021", "contagem": 43}, {"ano": "2022", "contagem": 44}, {"ano": "2023", "contagem": 47}, {"ano": "2024", "contagem": 80}, {"ano": "2025", "contagem": 36}
+          ],
+          "distribuicao_mensal": [
+            {"mes": "01", "contagem": 29, "ordem": 0, "nome": "Jan"}, {"mes": "02", "contagem": 33, "ordem": 1, "nome": "Fev"}, {"mes": "03", "contagem": 25, "ordem": 2, "nome": "Mar"}, {"mes": "04", "contagem": 26, "ordem": 3, "nome": "Abr"}, {"mes": "05", "contagem": 15, "ordem": 4, "nome": "Mai"}, {"mes": "06", "contagem": 17, "ordem": 5, "nome": "Jun"}, {"mes": "07", "contagem": 17, "ordem": 6, "nome": "Jul"}, {"mes": "08", "contagem": 59, "ordem": 7, "nome": "Ago"}, {"mes": "09", "contagem": 21, "ordem": 8, "nome": "Set"}, {"mes": "10", "contagem": 15, "ordem": 9, "nome": "Out"}, {"mes": "11", "contagem": 18, "ordem": 10, "nome": "Nov"}, {"mes": "12", "contagem": 24, "ordem": 11, "nome": "Dez"}
+          ],
+          "comparativo_anual": [
+            {"ano": "2020", "estado": "Ileso", "contagem": 7}, {"ano": "2020", "estado": "Lesões Graves", "contagem": 9}, {"ano": "2020", "estado": "Lesões Leves", "contagem": 28}, {"ano": "2020", "estado": "Óbito", "contagem": 5}, {"ano": "2021", "estado": "Lesões Graves", "contagem": 17}, {"ano": "2021", "estado": "Lesões Leves", "contagem": 24}, {"ano": "2021", "estado": "Não Informado", "contagem": 2}, {"ano": "2022", "estado": "Lesões Graves", "contagem": 15}, {"ano": "2022", "estado": "Lesões Leves", "contagem": 16}, {"ano": "2022", "estado": "Não Informado", "contagem": 11}, {"ano": "2022", "estado": "Óbito", "contagem": 2}, {"ano": "2023", "estado": "Ileso", "contagem": 6}, {"ano": "2023", "estado": "Lesões Graves", "contagem": 15}, {"ano": "2023", "estado": "Lesões Leves", "contagem": 22}, {"ano": "2023", "estado": "Não Informado", "contagem": 1}, {"ano": "2023", "estado": "Óbito", "contagem": 3}, {"ano": "2024", "estado": "Ileso", "contagem": 1}, {"ano": "2024", "estado": "Lesões Graves", "contagem": 31}, {"ano": "2024", "estado": "Lesões Leves", "contagem": 33}, {"ano": "2024", "estado": "Não Informado", "contagem": 1}, {"ano": "2024", "estado": "Óbito", "contagem": 14}, {"ano": "2025", "estado": "Ileso", "contagem": 6}, {"ano": "2025", "estado": "Lesões Graves", "contagem": 3}, {"ano": "2025", "estado": "Lesões Leves", "contagem": 23}, {"ano": "2025", "estado": "Óbito", "contagem": 4}
+          ]
+        };
+
+        let charts = {}; // Store chart instances
+
+        // Chart Initialization Functions
+        const createOrUpdateChart = (ctxId, type, data, options) => {
+            const ctx = document.getElementById(ctxId).getContext('2d');
+            if (charts[ctxId]) {
+                charts[ctxId].destroy(); // Destroy previous chart instance
+            }
+            charts[ctxId] = new Chart(ctx, { type, data, options });
+        };
+
+        // Data Processing and Chart Update Functions
+        const updateKPIs = () => {
+            const kpis = aggregatedData.kpis;
+            document.getElementById('kpi-total-acidentes').textContent = kpis.total_acidentes;
+            document.getElementById('kpi-lesoes-graves').textContent = kpis.lesoes_graves;
+            document.getElementById('kpi-obitos').textContent = kpis.obitos;
+            document.getElementById('kpi-horario-critico').textContent = `${kpis.horario_critico}h (${kpis.horario_critico_count})`;
+        };
+
+        const updateEvolucaoMensalChart = () => {
+            const data = aggregatedData.evolucao_mensal;
+            const chartData = {
+                labels: data.map(item => item.mes),
+                datasets: [{
+                    label: 'Acidentes por Mês',
+                    data: data.map(item => item.contagem),
+                    borderColor: 'var(--secondary-color)',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            };
+            createOrUpdateChart('evolucaoMensalChart', 'line', chartData, { responsive: true, maintainAspectRatio: false });
+        };
+
+        const updateTipoAcidenteChart = () => {
+            const data = aggregatedData.tipo_acidente;
+            const chartData = {
+                labels: data.map(item => item.tipo),
+                datasets: [{
+                    label: 'Contagem',
+                    data: data.map(item => item.contagem),
+                    backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                    borderColor: 'var(--secondary-color)',
+                    borderWidth: 1
+                }]
+            };
+            createOrUpdateChart('tipoAcidenteChart', 'bar', chartData, { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } });
+        };
+
+        const updateEstadoFisicoGeralChart = () => {
+            const data = aggregatedData.estado_fisico;
+            const chartData = {
+                labels: data.map(item => item.estado),
+                datasets: [{
+                    data: data.map(item => item.contagem),
+                    backgroundColor: [
+                        'rgba(59, 130, 246, 0.7)', // Lesões Leves
+                        'rgba(245, 158, 11, 0.7)', // Lesões Graves
+                        'rgba(220, 38, 38, 0.7)', // Óbito
+                        'rgba(22, 163, 74, 0.7)', // Ileso
+                        'rgba(100, 116, 139, 0.7)' // Não Informado
+                    ]
+                }]
+            };
+            createOrUpdateChart('estadoFisicoGeralChart', 'pie', chartData, { responsive: true, maintainAspectRatio: false });
+        };
+
+        const updateDiaSemanaGeralChart = () => {
+            const data = aggregatedData.dia_semana;
+            const chartData = {
+                labels: data.map(item => item.dia),
+                datasets: [{
+                    label: 'Contagem',
+                    data: data.map(item => item.contagem),
+                    backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                    borderColor: 'var(--secondary-color)',
+                    borderWidth: 1
+                }]
+            };
+            createOrUpdateChart('diaSemanaGeralChart', 'bar', chartData, { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } });
+        };
+
+        const updateHorasDiaChart = () => {
+            const data = aggregatedData.hora_dia;
+            const chartData = {
+                labels: data.map(item => `${item.hora}h`),
+                datasets: [{
+                    label: 'Número de Acidentes',
+                    data: data.map(item => item.contagem),
+                    backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                    borderColor: 'var(--secondary-color)',
+                    borderWidth: 1
+                }]
+            };
+            createOrUpdateChart('horasDiaChart', 'bar', chartData, { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } });
+        };
+
+        const updateFaseDiaChart = () => {
+            const data = aggregatedData.fase_dia;
+            const chartData = {
+                labels: data.map(item => item.fase),
+                datasets: [{
+                    label: 'Contagem',
+                    data: data.map(item => item.contagem),
+                    backgroundColor: [
+                        'rgba(22, 163, 74, 0.7)', // Pleno dia
+                        'rgba(30, 58, 138, 0.7)',  // Plena noite
+                        'rgba(59, 130, 246, 0.7)', // Anoitecer
+                        'rgba(245, 158, 11, 0.7)' // Amanhecer
+                    ]
+                }]
+            };
+            createOrUpdateChart('faseDiaChart', 'bar', chartData, { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } });
+        };
+
+        const updateDiaSemanaChart = () => {
+            const data = aggregatedData.dia_semana;
+            const chartData = {
+                labels: data.map(item => item.dia),
+                datasets: [{
+                    label: 'Contagem',
+                    data: data.map(item => item.contagem),
+                    backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                    borderColor: 'var(--secondary-color)',
+                    borderWidth: 1
+                }]
+            };
+            createOrUpdateChart('diaSemanaChart', 'bar', chartData, { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } });
+        };
+
+        const updateTipoAcidentePerfilChart = () => {
+            // Use the same data as the general view, but maybe show more types if needed
+            const data = aggregatedData.tipo_acidente; // Using top 5 for consistency
+            const allTypes = aggregatedData.evolucao_mensal.reduce((acc, curr) => acc + curr.contagem, 0); // Placeholder for all types if needed
+            const chartData = {
+                labels: data.map(item => item.tipo),
+                datasets: [{
+                    label: 'Contagem',
+                    data: data.map(item => item.contagem),
+                    backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                    borderColor: 'var(--secondary-color)',
+                    borderWidth: 1
+                }]
+            };
+            createOrUpdateChart('tipoAcidentePerfilChart', 'bar', chartData, { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } });
+        };
+
+        const updateCausaAcidenteChart = () => {
+            const data = aggregatedData.causa_acidente;
+            const chartData = {
+                labels: data.map(item => item.causa),
+                datasets: [{
+                    label: 'Contagem',
+                    data: data.map(item => item.contagem),
+                    backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                    borderColor: 'var(--secondary-color)',
+                    borderWidth: 1
+                }]
+            };
+            createOrUpdateChart('causaAcidenteChart', 'bar', chartData, { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } });
+        };
+
+        const updateCondicaoMeteoChart = () => {
+            const data = aggregatedData.condicao_meteo;
+            const chartData = {
+                labels: data.map(item => item.condicao),
+                datasets: [{
+                    data: data.map(item => item.contagem),
+                    backgroundColor: [
+                        'rgba(59, 130, 246, 0.7)', // Céu Claro
+                        'rgba(100, 116, 139, 0.7)', // Nublado
+                        'rgba(30, 58, 138, 0.7)', // Chuva
+                        'rgba(245, 158, 11, 0.7)', // Sol
+                        'rgba(168, 162, 158, 0.7)' // Garoa/Chuvisco
+                    ]
+                }]
+            };
+            createOrUpdateChart('condicaoMeteoChart', 'pie', chartData, { responsive: true, maintainAspectRatio: false });
+        };
+
+        const updateTipoPistaChart = () => {
+            const data = aggregatedData.tipo_pista;
+            const chartData = {
+                labels: data.map(item => item.tipo),
+                datasets: [{
+                    label: 'Contagem',
+                    data: data.map(item => item.contagem),
+                    backgroundColor: [
+                        'rgba(59, 130, 246, 0.7)',
+                        'rgba(245, 158, 11, 0.7)',
+                        'rgba(22, 163, 74, 0.7)'
+                    ]
+                }]
+            };
+            createOrUpdateChart('tipoPistaChart', 'bar', chartData, { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } });
+        };
+
+        const updateEstadoFisicoVitimasChart = () => {
+            const data = aggregatedData.estado_fisico;
+            const chartData = {
+                labels: data.map(item => item.estado),
+                datasets: [{
+                    label: 'Contagem',
+                    data: data.map(item => item.contagem),
+                    backgroundColor: [
+                        'rgba(59, 130, 246, 0.7)', // Lesões Leves
+                        'rgba(245, 158, 11, 0.7)', // Lesões Graves
+                        'rgba(220, 38, 38, 0.7)', // Óbito
+                        'rgba(22, 163, 74, 0.7)', // Ileso
+                        'rgba(100, 116, 139, 0.7)' // Não Informado
+                    ]
+                }]
+            };
+            createOrUpdateChart('estadoFisicoVitimasChart', 'bar', chartData, { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } });
+        };
+
+        const updateSexoChart = () => {
+            const data = aggregatedData.sexo;
+            const chartData = {
+                labels: data.map(item => item.sexo),
+                datasets: [{
+                    data: data.map(item => item.contagem),
+                    backgroundColor: [
+                        'rgba(59, 130, 246, 0.7)', // Masculino
+                        'rgba(236, 72, 153, 0.7)', // Feminino
+                        'rgba(100, 116, 139, 0.7)' // Não Informado
+                    ]
+                }]
+            };
+            createOrUpdateChart('sexoChart', 'pie', chartData, { responsive: true, maintainAspectRatio: false });
+        };
+
+        const updateIdadeChart = () => {
+            const data = aggregatedData.faixa_etaria;
+            const chartData = {
+                labels: data.map(item => item.faixa),
+                datasets: [{
+                    label: 'Número de Vítimas',
+                    data: data.map(item => item.contagem),
+                    backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                    borderColor: 'var(--secondary-color)',
+                    borderWidth: 1
+                }]
+            };
+            createOrUpdateChart('idadeChart', 'bar', chartData, { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } });
+        };
+
+        const updateEvolucaoAnualChart = () => {
+            const data = aggregatedData.evolucao_anual;
+            const chartData = {
+                labels: data.map(item => item.ano),
+                datasets: [{
+                    label: 'Acidentes por Ano',
+                    data: data.map(item => item.contagem),
+                    borderColor: 'var(--secondary-color)',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            };
+            createOrUpdateChart('evolucaoAnualChart', 'line', chartData, { responsive: true, maintainAspectRatio: false });
+        };
+
+        const updateDistribuicaoMensalChart = () => {
+            const data = aggregatedData.distribuicao_mensal;
+            const chartData = {
+                labels: data.map(item => item.nome),
+                datasets: [{
+                    label: 'Número de Acidentes',
+                    data: data.map(item => item.contagem),
+                    backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                    borderColor: 'var(--secondary-color)',
+                    borderWidth: 1
+                }]
+            };
+            createOrUpdateChart('distribuicaoMensalChart', 'bar', chartData, { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } });
+        };
+
+        const updateComparativoAnualChart = () => {
+            const data = aggregatedData.comparativo_anual;
+            const years = [...new Set(data.map(item => item.ano))].sort();
+            const states = [...new Set(data.map(item => item.estado))];
+            const stateColors = {
+                'Lesões Leves': 'rgba(59, 130, 246, 0.7)',
+                'Lesões Graves': 'rgba(245, 158, 11, 0.7)',
+                'Óbito': 'rgba(220, 38, 38, 0.7)',
+                'Ileso': 'rgba(22, 163, 74, 0.7)',
+                'Não Informado': 'rgba(100, 116, 139, 0.7)'
+            };
+
+            const datasets = states.map(state => ({
+                label: state,
+                data: years.map(year => {
+                    const record = data.find(item => item.ano === year && item.estado === state);
+                    return record ? record.contagem : 0;
+                }),
+                backgroundColor: stateColors[state],
+                borderColor: stateColors[state].replace('0.7', '1'),
+                borderWidth: 1
+            }));
+
+            const chartData = { labels: years, datasets };
+            createOrUpdateChart('comparativoAnualChart', 'bar', chartData, { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true } } });
+        };
+
+        // Update all dashboard elements
+        const updateDashboard = () => {
+            updateKPIs();
+            // Visão Geral
+            updateEvolucaoMensalChart();
+            updateTipoAcidenteChart();
+            updateEstadoFisicoGeralChart();
+            updateDiaSemanaGeralChart();
+            // Horários
+            updateHorasDiaChart();
+            updateFaseDiaChart();
+            updateDiaSemanaChart();
+            // Perfil Acidentes
+            updateTipoAcidentePerfilChart();
+            updateCausaAcidenteChart();
+            updateCondicaoMeteoChart();
+            updateTipoPistaChart();
+            // Vítimas
+            updateEstadoFisicoVitimasChart();
+            updateSexoChart();
+            updateIdadeChart();
+            // Tendências
+            updateEvolucaoAnualChart();
+            updateDistribuicaoMensalChart();
+            updateComparativoAnualChart();
+        };
+
+        // Navigation and Event Listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            const menuItems = document.querySelectorAll('.menu-item');
+            const tabContents = document.querySelectorAll('.tab-content');
+            const menuToggle = document.getElementById('menu-toggle');
+            const sidebar = document.getElementById('sidebar');
+            
+            updateDashboard(); // Update dashboard with embedded data
+            
+            // Tab navigation
+            menuItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    menuItems.forEach(i => i.classList.remove('active'));
+                    tabContents.forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    document.getElementById(this.getAttribute('data-tab')).classList.add('active');
+                    if (window.innerWidth <= 768) {
+                        sidebar.classList.remove('active');
+                    }
+                });
+            });
+            
+            // Mobile menu toggle
+            menuToggle.addEventListener('click', () => sidebar.classList.toggle('active'));
+            
+            // Export button (placeholder)
+            document.getElementById('export-btn').addEventListener('click', () => {
+                alert('Funcionalidade de exportação indisponível nesta versão.');
+            });
+        });
+    </script>
+</body>
+</html>
