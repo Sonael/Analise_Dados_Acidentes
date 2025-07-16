@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="pt-br">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard de Acidentes com Ciclistas em Recife</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@1.4.0"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         :root {
@@ -35,6 +37,9 @@
             background-color: var(--background-color);
             color: var(--text-primary);
             overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
         }
 
         /* Sidebar */
@@ -92,7 +97,8 @@
             white-space: nowrap;
         }
 
-        .menu-item:hover, .menu-item.active {
+        .menu-item:hover,
+        .menu-item.active {
             background-color: rgba(255, 255, 255, 0.1);
         }
 
@@ -117,6 +123,15 @@
             margin-left: var(--sidebar-width);
             padding: 20px;
             transition: margin-left 0.3s ease;
+            flex: 1;
+        }
+
+        .dashboard-content {
+            display: none;
+        }
+
+        .dashboard-content.active {
+            display: block;
         }
 
         .header {
@@ -128,10 +143,45 @@
             border-bottom: 1px solid var(--border-color);
         }
 
+        /* Título e seletor da base de dados */
+        .header-title-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
         .header h1 {
             color: var(--primary-color);
             font-size: 1.8rem;
+            margin-right: 400px;/* Remover margem padrão */
         }
+
+        .data-source-selector {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background-color: #ffffff;
+            padding: 5px 10px;
+            border-radius: 6px;
+        }
+
+        .data-source-selector label {
+            font-size: 1rem;
+            color: var(--text-primary);
+            white-space: nowrap;
+            /* Impede quebra de linha */
+        }
+
+        .data-source-selector select {
+            font-size: 1rem;
+            padding: 8px 10px;
+            border-radius: 5px;
+            border: 1px solid var(--border-color);
+            background-color: var(--card-bg);
+            color: var(--text-primary);
+            cursor: pointer;
+        }
+
 
         .header-actions {
             display: flex;
@@ -192,6 +242,7 @@
             border-radius: 8px;
             padding: 20px;
             box-shadow: var(--card-shadow);
+            min-height: 250px;
         }
 
         .chart-card.full-width {
@@ -217,6 +268,10 @@
             width: 100%;
         }
 
+        .chart-body canvas {
+            max-height: 100%;
+        }
+
         /* Tab Content */
         .tab-content {
             display: none;
@@ -237,25 +292,54 @@
             .chart-container {
                 grid-template-columns: 1fr;
             }
-            
+
             .chart-card.full-width {
                 grid-column: span 1;
             }
-            
+
             .sidebar {
                 width: 0;
             }
-            
+
             .sidebar.active {
                 width: var(--sidebar-width);
             }
-            
+
             .main-content {
                 margin-left: 0;
             }
-            
+
             .menu-toggle {
                 display: block;
+            }
+
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+                /* Ajuste o espaçamento vertical */
+            }
+
+            .header-title-section {
+                flex-direction: column;
+                align-items: flex-start;
+                width: 100%;
+                /* Ocupa a largura total */
+            }
+
+            .data-source-selector {
+                flex-direction: column;
+                align-items: flex-start;
+                width: 100%;
+                /* Ocupa a largura total */
+                gap: 5px;
+                /* Espaço entre label e select */
+            }
+
+            .data-source-selector label,
+            .data-source-selector select {
+                width: 100%;
+                /* Fazer select e label ocuparem toda a largura disponível */
             }
         }
 
@@ -280,329 +364,1195 @@
                 display: block;
             }
         }
+
+        /* Filter specific styles */
+        .filter-controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            padding: 20px;
+            background-color: var(--card-bg);
+            border-radius: 8px;
+            box-shadow: var(--card-shadow);
+        }
+
+        .filter-controls label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .filter-controls select,
+        .filter-controls input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid var(--border-color);
+            background-color: var(--background-color);
+            color: var(--text-primary);
+        }
+
+        .filter-controls button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .filter-controls button:hover {
+            background-color: var(--secondary-color);
+        }
+
+        .filter-controls button#clear-filters-btn {
+            background-color: var(--text-secondary);
+        }
+
+        .filter-controls button#clear-filters-btn:hover {
+            background-color: var(--text-primary);
+        }
+
+        .page-footer {
+            text-align: center;
+            padding: 15px 10px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            background-color: var(--background-color);
+            border-top: 1px solid var(--border-color);
+            margin-top: 20px;
+            /* Garante que ocupe o espaço quando o conteúdo for pequeno */
+        }
     </style>
 </head>
+
 <body>
-    <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
-            <svg xmlns="http://www.w3.org/2000/svg" height="24" width="30" viewBox="0 0 640 512"><!--!Font Awesome Free 6.7.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2025 Fonticons, Inc.--><path fill="#ffffff" d="M312 32c-13.3 0-24 10.7-24 24s10.7 24 24 24l25.7 0 34.6 64-149.4 0-27.4-38C191 99.7 183.7 96 176 96l-56 0c-13.3 0-24 10.7-24 24s10.7 24 24 24l43.7 0 22.1 30.7-26.6 53.1c-10-2.5-20.5-3.8-31.2-3.8C57.3 224 0 281.3 0 352s57.3 128 128 128c65.3 0 119.1-48.9 127-112l49 0c8.5 0 16.3-4.5 20.7-11.8l84.8-143.5 21.7 40.1C402.4 276.3 384 312 384 352c0 70.7 57.3 128 128 128s128-57.3 128-128s-57.3-128-128-128c-13.5 0-26.5 2.1-38.7 6L375.4 48.8C369.8 38.4 359 32 347.2 32L312 32zM458.6 303.7l32.3 59.7c6.3 11.7 20.9 16 32.5 9.7s16-20.9 9.7-32.5l-32.3-59.7c3.6-.6 7.4-.9 11.2-.9c39.8 0 72 32.2 72 72s-32.2 72-72 72s-72-32.2-72-72c0-18.6 7-35.5 18.6-48.3zM133.2 368l65 0c-7.3 32.1-36 56-70.2 56c-39.8 0-72-32.2-72-72s32.2-72 72-72c1.7 0 3.4 .1 5.1 .2l-24.2 48.5c-9 18.1 4.1 39.4 24.3 39.4zm33.7-48l50.7-101.3 72.9 101.2-.1 .1-123.5 0zm90.6-128l108.5 0L317 274.8 257.4 192z"/></svg>
+            <svg xmlns="http://www.w3.org/2000/svg" height="24" width="30" viewBox="0 0 640 512">
+                <path fill="#ffffff"
+                    d="M312 32c-13.3 0-24 10.7-24 24s10.7 24 24 24l25.7 0 34.6 64-149.4 0-27.4-38C191 99.7 183.7 96 176 96l-56 0c-13.3 0-24 10.7-24 24s10.7 24 24 24l43.7 0 22.1 30.7-26.6 53.1c-10-2.5-20.5-3.8-31.2-3.8C57.3 224 0 281.3 0 352s57.3 128 128 128c65.3 0 119.1-48.9 127-112l49 0c8.5 0 16.3-4.5 20.7-11.8l84.8-143.5 21.7 40.1C402.4 276.3 384 312 384 352c0 70.7 57.3 128 128 128s128-57.3 128-128s-57.3-128-128-128c-13.5 0-26.5 2.1-38.7 6L375.4 48.8C369.8 38.4 359 32 347.2 32L312 32zM458.6 303.7l32.3 59.7c6.3 11.7 20.9 16 32.5 9.7s16-20.9 9.7-32.5l-32.3-59.7c3.6-.6 7.4-.9 11.2-.9c39.8 0 72 32.2 72 72s-32.2 72-72 72s-72-32.2-72-72c0-18.6 7-35.5 18.6-48.3zM133.2 368l65 0c-7.3 32.1-36 56-70.2 56c-39.8 0-72-32.2-72-72s32.2-72 72-72c1.7 0 3.4 .1 5.1 .2l-24.2 48.5c-9 18.1 4.1 39.4 24.3 39.4zm33.7-48l50.7-101.3 72.9 101.2-.1 .1-123.5 0zm90.6-128l108.5 0L317 274.8 257.4 192z" />
+            </svg>
             <h3>Dashboard Ciclistas</h3>
         </div>
         <div class="sidebar-menu">
             <div class="menu-item active" data-tab="visao-geral">
                 <i class="fas fa-home"></i>
-                <span>Visão Geral</span>
+                <span data-tab-name-data="Visão Geral" data-tab-name-raw="Panorama Geral">Visão Geral</span>
             </div>
             <div class="menu-item" data-tab="horarios">
                 <i class="fas fa-clock"></i>
-                <span>Horários</span>
+                <span data-tab-name-data="Horários" data-tab-name-raw="Distribuição Temporal">Horários</span>
             </div>
             <div class="menu-item" data-tab="perfil-acidentes">
                 <i class="fas fa-car-crash"></i>
-                <span>Perfil Acidentes</span>
+                <span data-tab-name-data="Perfil Acidentes" data-tab-name-raw="Detalhes dos Acidentes">Perfil
+                    Acidentes</span>
             </div>
-            <div class="menu-item" data-tab="vitimas">
+            <div class="menu-item" data-tab="vitimas" data-hide-for-raw="true">
                 <i class="fas fa-user-injured"></i>
-                <span>Vítimas</span>
+                <span data-tab-name-data="Vítimas" data-tab-name-raw="">Vítimas</span>
             </div>
             <div class="menu-item" data-tab="tendencias">
                 <i class="fas fa-chart-line"></i>
-                <span>Tendências</span>
+                <span data-tab-name-data="Tendências" data-tab-name-raw="Evolução Temporal">Tendências</span>
             </div>
-            <!-- Filtros Tab Removed -->
+            <div class="menu-item" data-tab="mapas" data-hide-for-raw="true">
+                <i class="fas fa-map-marked-alt"></i>
+                <span data-tab-name-data="Mapas" data-tab-name-raw="Mapas">Mapas</span>
+            </div>
+            <div class="menu-item" data-tab="filtros">
+                <i class="fas fa-filter"></i>
+                <span data-tab-name-data="Filtros" data-tab-name-raw="Filtros">Filtros</span>
+            </div>
         </div>
     </div>
 
-    <!-- Main Content -->
     <div class="main-content" id="main-content">
         <div class="header">
             <button class="menu-toggle" id="menu-toggle">
                 <i class="fas fa-bars"></i>
             </button>
-            <h1>Dashboard de Acidentes com Ciclistas em Recife</h1>
+            <div class="header-title-section">
+                <h1>Dashboard de Acidentes com Ciclistas em Recife</h1>
+                <div class="data-source-selector">
+                    <label for="data-source-select">Escolha a base de dados:</label>
+                    <select id="data-source-select">
+                        <option value="data.json">PRF</option>
+                        <option value="raw_acidentes_ciclista_todos_anos.json">CTTU</option>
+                    </select>
+                </div>
+            </div>
         </div>
 
-        <!-- Visão Geral Tab -->
         <div class="tab-content active" id="visao-geral">
-            <div class="kpi-container">
-                <div class="kpi-card">
-                    <div class="kpi-title">Total de Acidentes</div>
-                    <div class="kpi-value" id="kpi-total-acidentes">-</div>
+            <div class="dashboard-content data-json-charts active">
+                <div class="kpi-container">
+                    <div class="kpi-card">
+                        <div class="kpi-title">Total de Acidentes</div>
+                        <div class="kpi-value" id="kpi-total-acidentes">-</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-title">Lesões Graves</div>
+                        <div class="kpi-value" id="kpi-lesoes-graves">-</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-title">Óbitos</div>
+                        <div class="kpi-value" id="kpi-obitos">-</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-title">Horário Crítico</div>
+                        <div class="kpi-value" id="kpi-horario-critico">-</div>
+                    </div>
                 </div>
-                <div class="kpi-card">
-                    <div class="kpi-title">Lesões Graves</div>
-                    <div class="kpi-value" id="kpi-lesoes-graves">-</div>
-                </div>
-                <div class="kpi-card">
-                    <div class="kpi-title">Óbitos</div>
-                    <div class="kpi-value" id="kpi-obitos">-</div>
-                </div>
-                <div class="kpi-card">
-                    <div class="kpi-title">Horário Crítico</div>
-                    <div class="kpi-value" id="kpi-horario-critico">-</div>
-                </div>
-            </div>
 
-            <div class="chart-container">
-                <div class="chart-card">
-                    <div class="chart-header">
-                        <div class="chart-title">Evolução Mensal de Acidentes</div>
+                <div class="chart-container">
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <div class="chart-title">Evolução Mensal de Acidentes</div>
+                        </div>
+                        <div class="chart-body">
+                            <canvas id="evolucaoMensalChart"></canvas>
+                        </div>
                     </div>
-                    <div class="chart-body">
-                        <canvas id="evolucaoMensalChart"></canvas>
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <div class="chart-title">Distribuição por Tipo de Acidente (Top 5)</div>
+                        </div>
+                        <div class="chart-body">
+                            <canvas id="tipoAcidenteChart"></canvas>
+                        </div>
                     </div>
                 </div>
-                <div class="chart-card">
-                    <div class="chart-header">
-                        <div class="chart-title">Distribuição por Tipo de Acidente (Top 5)</div>
+                <div class="chart-container">
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <div class="chart-title">Distribuição por Estado Físico</div>
+                        </div>
+                        <div class="chart-body">
+                            <canvas id="estadoFisicoGeralChart"></canvas>
+                        </div>
                     </div>
-                    <div class="chart-body">
-                        <canvas id="tipoAcidenteChart"></canvas>
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <div class="chart-title">Distribuição por Dia da Semana</div>
+                        </div>
+                        <div class="chart-body">
+                            <canvas id="diaSemanaGeralChart"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="chart-container">
-                <div class="chart-card">
-                    <div class="chart-header">
-                        <div class="chart-title">Distribuição por Estado Físico</div>
+            <div class="dashboard-content raw-json-charts">
+                <div class="kpi-container raw-json-kpis">
+                    <div class="kpi-card">
+                        <div class="kpi-title">Total de Acidentes</div>
+                        <div class="kpi-value" id="kpi-total-acidentes-raw">-</div>
                     </div>
-                    <div class="chart-body">
-                        <canvas id="estadoFisicoGeralChart"></canvas>
+                    <div class="kpi-card">
+                        <div class="kpi-title">Vítimas Fatais</div>
+                        <div class="kpi-value" id="kpi-acidentes-fatais-raw">-</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-title">Vítimas Não Fatais</div>
+                        <div class="kpi-value" id="kpi-acidentes-nao-fatais-raw">-</div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-title">Horário Mais Crítico</div>
+                        <div class="kpi-value" id="kpi-horario-critico-raw">-</div>
                     </div>
                 </div>
-                <div class="chart-card">
-                    <div class="chart-header">
-                        <div class="chart-title">Distribuição por Dia da Semana</div>
+
+                <div class="chart-container raw-json-charts-container">
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <div class="chart-title">Acidentes por Ano</div>
+                        </div>
+                        <div class="chart-body">
+                            <canvas id="rawVisaoGeralAnoChart"></canvas>
+                        </div>
                     </div>
-                    <div class="chart-body">
-                        <canvas id="diaSemanaGeralChart"></canvas>
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <div class="chart-title">Top 10 Bairros com Mais Acidentes</div>
+                        </div>
+                        <div class="chart-body">
+                            <canvas id="rawVisaoGeralBairroChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-container raw-json-charts-container">
+                    <div class="chart-card full-width">
+                        <div class="chart-header">
+                            <div class="chart-title">Acidentes por Dia da Semana</div>
+                        </div>
+                        <div class="chart-body">
+                            <canvas id="rawVisaoGeralDiaSemanaChart"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
-            <footer style="text-align: center;">
-                Fonte: <a href="https://www.gov.br/prf/pt-br/acesso-a-informacao/dados-abertos/dados-abertos-da-prf">https://www.gov.br/prf/pt-br/acesso-a-informacao/dados-abertos/dados-abertos-da-prf</a>
-            </footer>
         </div>
 
-        <!-- Horários Tab -->
         <div class="tab-content" id="horarios">
-            <div class="chart-container">
-                <div class="chart-card full-width">
-                    <div class="chart-header">
-                        <div class="chart-title">Distribuição por Hora do Dia</div>
+            <div class="dashboard-content data-json-charts active">
+                <div class="chart-container">
+                    <div class="chart-card full-width">
+                        <div class="chart-header">
+                            <div class="chart-title">Distribuição por Hora do Dia</div>
+                        </div>
+                        <div class="chart-body">
+                            <canvas id="horasDiaChart"></canvas>
+                        </div>
                     </div>
-                    <div class="chart-body">
-                        <canvas id="horasDiaChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <div class="chart-card full-width">
+                        <div class="chart-header">
+                            <div class="chart-title">Distribuição por Fase do Dia</div>
+                        </div>
+                        <div class="chart-body">
+                            <canvas id="faseDiaChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            <div class="dashboard-content raw-json-charts">
+                <div class="chart-container raw-json-charts-container">
+                    <div class="chart-card full-width">
+                        <div class="chart-header">
+                            <div class="chart-title">Distribuição de Acidentes por Hora</div>
+                        </div>
+                        <div class="chart-body">
+                            <canvas id="rawHorariosHoraChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                <div class="chart-container raw-json-charts-container">
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <div class="chart-title">Distribuição por Fase do Dia</div>
+                        </div>
+                        <div class="chart-body">
+                            <canvas id="rawHorariosFaseDiaChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <div class="chart-title">Acidentes por Hora e Dia da Semana</div>
+                        </div>
+                        <div class="chart-body">
+                            <canvas id="rawHorariosHeatmapChart"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="chart-container">
-                <div class="chart-card">
-                    <div class="chart-header">
-                        <div class="chart-title">Distribuição por Fase do Dia</div>
-                    </div>
-                    <div class="chart-body">
-                        <canvas id="faseDiaChart"></canvas>
-                    </div>
-                </div>
-                <div class="chart-card">
-                    <div class="chart-header">
-                        <div class="chart-title">Distribuição por Dia da Semana</div>
-                    </div>
-                    <div class="chart-body">
-                        <canvas id="diaSemanaChart"></canvas>
-                    </div>
-                </div>
-            </div>
-            <footer style="text-align: center;">
-                Fonte: <a href="https://www.gov.br/prf/pt-br/acesso-a-informacao/dados-abertos/dados-abertos-da-prf">https://www.gov.br/prf/pt-br/acesso-a-informacao/dados-abertos/dados-abertos-da-prf</a>
-            </footer>
         </div>
 
-        <!-- Perfil Acidentes Tab -->
         <div class="tab-content" id="perfil-acidentes">
-            <div class="chart-container">
-                <div class="chart-card">
-                    <div class="chart-header">
-                        <div class="chart-title">Distribuição por Tipo de Acidente</div>
+            <div class="dashboard-content data-json-charts active">
+                <div class="chart-container">
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <div class="chart-title">Distribuição por Tipo de Acidente</div>
+                        </div>
+                        <div class="chart-body">
+                            <canvas id="tipoAcidentePerfilChart"></canvas>
+                        </div>
                     </div>
-                    <div class="chart-body">
-                        <canvas id="tipoAcidentePerfilChart"></canvas>
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <div class="chart-title">Distribuição por Causa do Acidente (Top 10)</div>
+                        </div>
+                        <div class="chart-body">
+                            <canvas id="causaAcidenteChart"></canvas>
+                        </div>
                     </div>
                 </div>
-                <div class="chart-card">
-                    <div class="chart-header">
-                        <div class="chart-title">Distribuição por Causa do Acidente (Top 10)</div>
+                <div class="chart-container">
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <div class="chart-title">Distribuição por Condição Meteorológica</div>
+                        </div>
+                        <div class="chart-body">
+                            <canvas id="condicaoMeteoChart"></canvas>
+                        </div>
                     </div>
-                    <div class="chart-body">
-                        <canvas id="causaAcidenteChart"></canvas>
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <div class="chart-title">Distribuição por Tipo de Pista</div>
+                        </div>
+                        <div class="chart-body">
+                            <canvas id="tipoPistaChart"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="chart-container">
-                <div class="chart-card">
-                    <div class="chart-header">
-                        <div class="chart-title">Distribuição por Condição Meteorológica</div>
+            <div class="dashboard-content raw-json-charts">
+                <div class="chart-container raw-json-charts-container">
+                    <div class="chart-card" style="display: none;">
+                        <div class="chart-header">
+                            <div class="chart-title"></div>
+                        </div>
+                        <div class="chart-body">
+                        </div>
                     </div>
-                    <div class="chart-body">
-                        <canvas id="condicaoMeteoChart"></canvas>
+                    <div class="chart-card" style="display: none;">
+                        <div class="chart-header">
+                            <div class="chart-title"></div>
+                        </div>
+                        <div class="chart-body">
+                        </div>
                     </div>
                 </div>
-                <div class="chart-card">
-                    <div class="chart-header">
-                        <div class="chart-title">Distribuição por Tipo de Pista</div>
-                    </div>
-                    <div class="chart-body">
-                        <canvas id="tipoPistaChart"></canvas>
+                <div class="chart-container raw-json-charts-container">
+                    <div class="chart-card full-width">
+                        <div class="chart-header">
+                            <div class="chart-title">Acidentes por Estado Físico da Vítima</div>
+                        </div>
+                        <div class="chart-body">
+                            <canvas id="rawDetalhesEstadoFisicoChart"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
-            <footer style="text-align: center;">
-                Fonte: <a href="https://www.gov.br/prf/pt-br/acesso-a-informacao/dados-abertos/dados-abertos-da-prf">https://www.gov.br/prf/pt-br/acesso-a-informacao/dados-abertos/dados-abertos-da-prf</a>
-            </footer>
         </div>
 
-        <!-- Vítimas Tab -->
         <div class="tab-content" id="vitimas">
-            <div class="chart-container">
-                <div class="chart-card">
-                    <div class="chart-header">
-                        <div class="chart-title">Distribuição por Estado Físico</div>
+            <div class="dashboard-content data-json-charts active">
+                <div class="chart-container">
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <div class="chart-title">Distribuição por Estado Físico</div>
+                        </div>
+                        <div class="chart-body">
+                            <canvas id="estadoFisicoVitimasChart"></canvas>
+                        </div>
                     </div>
-                    <div class="chart-body">
-                        <canvas id="estadoFisicoVitimasChart"></canvas>
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <div class="chart-title">Distribuição por Sexo</div>
+                        </div>
+                        <div class="chart-body">
+                            <canvas id="sexoChart"></canvas>
+                        </div>
                     </div>
                 </div>
-                <div class="chart-card">
-                    <div class="chart-header">
-                        <div class="chart-title">Distribuição por Sexo</div>
-                    </div>
-                    <div class="chart-body">
-                        <canvas id="sexoChart"></canvas>
+                <div class="chart-container">
+                    <div class="chart-card full-width">
+                        <div class="chart-header">
+                            <div class="chart-title">Distribuição por Faixa Etária</div>
+                        </div>
+                        <div class="chart-body">
+                            <canvas id="idadeChart"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="chart-container">
-                <div class="chart-card full-width">
-                    <div class="chart-header">
-                        <div class="chart-title">Distribuição por Faixa Etária</div>
-                    </div>
-                    <div class="chart-body">
-                        <canvas id="idadeChart"></canvas>
-                    </div>
-                </div>
-            </div>
-            <footer style="text-align: center;">
-                Fonte: <a href="https://www.gov.br/prf/pt-br/acesso-a-informacao/dados-abertos/dados-abertos-da-prf">https://www.gov.br/prf/pt-br/acesso-a-informacao/dados-abertos/dados-abertos-da-prf</a>
-            </footer>
         </div>
 
-        <!-- Tendências Tab -->
         <div class="tab-content" id="tendencias">
-            <div class="chart-container">
-                <div class="chart-card full-width">
-                    <div class="chart-header">
-                        <div class="chart-title">Evolução Anual de Acidentes</div>
+            <div class="dashboard-content data-json-charts active">
+                <div class="chart-container">
+                    <div class="chart-card full-width">
+                        <div class="chart-header">
+                            <div class="chart-title">Evolução Anual de Acidentes</div>
+                        </div>
+                        <div class="chart-body">
+                            <canvas id="evolucaoAnualChart"></canvas>
+                        </div>
                     </div>
-                    <div class="chart-body">
-                        <canvas id="evolucaoAnualChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <div class="chart-title">Distribuição Mensal (Média)</div>
+                        </div>
+                        <div class="chart-body">
+                            <canvas id="distribuicaoMensalChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <div class="chart-title">Comparativo Anual (Estado Físico)</div>
+                        </div>
+                        <div class="chart-body">
+                            <canvas id="comparativoAnualChart"></canvas>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="chart-container">
-                <div class="chart-card">
-                    <div class="chart-header">
-                        <div class="chart-title">Distribuição Mensal (Média)</div>
-                    </div>
-                    <div class="chart-body">
-                        <canvas id="distribuicaoMensalChart"></canvas>
+            <div class="dashboard-content raw-json-charts">
+                <div class="chart-container raw-json-charts-container">
+                    <div class="chart-card full-width">
+                        <div class="chart-header">
+                            <div class="chart-title">Evolução Mensal de Acidentes (Ano-Mês)</div>
+                        </div>
+                        <div class="chart-body">
+                            <canvas id="rawTendenciasMensalChart"></canvas>
+                        </div>
                     </div>
                 </div>
-                <div class="chart-card">
-                    <div class="chart-header">
-                        <div class="chart-title">Comparativo Anual (Estado Físico)</div>
+                <div class="chart-container raw-json-charts-container">
+                    <div class="chart-card" style="display: none;">
+                        <div class="chart-header">
+                            <div class="chart-title"></div>
+                        </div>
+                        <div class="chart-body">
+                        </div>
                     </div>
-                    <div class="chart-body">
-                        <canvas id="comparativoAnualChart"></canvas>
+                    <div class="chart-card" style="display: none;">
+                        <div class="chart-header">
+                            <div class="chart-title"></div>
+                        </div>
+                        <div class="chart-body">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-content" id="mapas">
+            <div class="chart-container">
+                <div class="chart-card full-width">
+                    <div class="chart-header">
+                        <div class="chart-title">Localização dos Acidentes com Ciclistas</div>
+                    </div>
+                    <div class="chart-body" style="height: 500px;">
+                        <div style="margin-bottom: 10px;">
+                            <label for="map-select">Escolha o mapa:</label>
+                            <select id="map-select">
+                                <option value="mapa_acidentes">Localização dos Acidentes</option>
+                                <option value="mapa_calor_acidentes">Mapa de Calor dos Acidentes</option>
+                            </select>
+                        </div>
+
+                        <div id="iframe-container" style="height: 500px;">
+                            <iframe id="mapa_acidentes" src="mapa_acidentes.html" width="100%" height="100%"
+                                style="border:none; border-radius: 8px; display: block;"></iframe>
+                            <iframe id="mapa_calor_acidentes" src="mapa_calor_acidentes.html" width="100%" height="100%"
+                                style="border:none; border-radius: 8px; display: none;"></iframe>
+                        </div>
                     </div>
                 </div>
             </div>
             <footer style="text-align: center;">
-                Fonte: <a href="https://www.gov.br/prf/pt-br/acesso-a-informacao/dados-abertos/dados-abertos-da-prf">https://www.gov.br/prf/pt-br/acesso-a-informacao/dados-abertos/dados-abertos-da-prf</a>
+                Fonte: Base de dados com coordenadas de acidentes em Recife.
             </footer>
         </div>
 
-        <!-- Filtros Tab Removed -->
+        <div class="tab-content" id="filtros">
+            <div class="header">
+                <h2>Filtros do Dashboard</h2>
+            </div>
+            <div class="filter-controls">
+                <div>
+                    <label for="filter-ano">Ano:</label>
+                    <select id="filter-ano">
+                        <option value="todos">Todos</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="filter-mes">Mês:</label>
+                    <select id="filter-mes">
+                        <option value="todos">Todos</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="filter-dia-semana">Dia da Semana:</label>
+                    <select id="filter-dia-semana">
+                        <option value="todos">Todos</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="filter-fase-dia">Fase do Dia:</label>
+                    <select id="filter-fase-dia">
+                        <option value="todos">Todos</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="filter-tipo-acidente">Tipo de Acidente:</label>
+                    <select id="filter-tipo-acidente">
+                        <option value="todos">Todos</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="filter-estado-fisico">Estado Físico da Vítima:</label>
+                    <select id="filter-estado-fisico">
+                        <option value="todos">Todos</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="filter-condicao-meteo">Condição Climática:</label>
+                    <select id="filter-condicao-meteo">
+                        <option value="todos">Todos</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="filter-bairro">Bairro:</label>
+                    <select id="filter-bairro">
+                        <option value="todos">Todos</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="filter-sexo">Sexo da Vítima:</label>
+                    <select id="filter-sexo">
+                        <option value="todos">Todos</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="filter-faixa-etaria">Faixa Etária da Vítima:</label>
+                    <select id="filter-faixa-etaria">
+                        <option value="todos">Todos</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="filter-causa-acidente">Causa do Acidente:</label>
+                    <select id="filter-causa-acidente">
+                        <option value="todos">Todos</option>
+                    </select>
+                </div>
+            </div>
+            <div style="margin-top: 20px; text-align: center;">
+                <button id="apply-filters-btn">Aplicar Filtros</button>
+                <button id="clear-filters-btn">Limpar Filtros</button>
+            </div>
+            <p style="margin-top: 20px; text-align: center; color: var(--text-secondary);">
+                Os filtros atuam sobre os dados brutos e reprocessam os gráficos.
+            </p>
+        </div>
+
 
     </div>
 
     <script>
-        // EMBEDDED AGGREGATED DATA
-        const aggregatedData = {
-          "kpis": {
-            "total_acidentes": 299,
-            "lesoes_graves": 90,
-            "obitos": 28,
-            "horario_critico": "17",
-            "horario_critico_count": 57
-          },
-          "evolucao_mensal": [
-            {"mes": "2020-01", "contagem": 1}, {"mes": "2020-02", "contagem": 1}, {"mes": "2020-03", "contagem": 9}, {"mes": "2020-05", "contagem": 4}, {"mes": "2020-06", "contagem": 2}, {"mes": "2020-07", "contagem": 3}, {"mes": "2020-08", "contagem": 9}, {"mes": "2020-09", "contagem": 11}, {"mes": "2020-10", "contagem": 3}, {"mes": "2020-12", "contagem": 6}, {"mes": "2021-01", "contagem": 6}, {"mes": "2021-02", "contagem": 1}, {"mes": "2021-04", "contagem": 3}, {"mes": "2021-05", "contagem": 5}, {"mes": "2021-06", "contagem": 7}, {"mes": "2021-07", "contagem": 1}, {"mes": "2021-08", "contagem": 13}, {"mes": "2021-10", "contagem": 2}, {"mes": "2021-11", "contagem": 2}, {"mes": "2021-12", "contagem": 3}, {"mes": "2022-01", "contagem": 7}, {"mes": "2022-02", "contagem": 1}, {"mes": "2022-04", "contagem": 7}, {"mes": "2022-05", "contagem": 3}, {"mes": "2022-06", "contagem": 1}, {"mes": "2022-07", "contagem": 5}, {"mes": "2022-08", "contagem": 10}, {"mes": "2022-09", "contagem": 2}, {"mes": "2022-10", "contagem": 7}, {"mes": "2022-12", "contagem": 1}, {"mes": "2023-01", "contagem": 3}, {"mes": "2023-02", "contagem": 16}, {"mes": "2023-03", "contagem": 3}, {"mes": "2023-07", "contagem": 7}, {"mes": "2023-09", "contagem": 2}, {"mes": "2023-10", "contagem": 3}, {"mes": "2023-11", "contagem": 4}, {"mes": "2023-12", "contagem": 9}, {"mes": "2024-01", "contagem": 3}, {"mes": "2024-02", "contagem": 5}, {"mes": "2024-03", "contagem": 7}, {"mes": "2024-04", "contagem": 4}, {"mes": "2024-05", "contagem": 3}, {"mes": "2024-06", "contagem": 7}, {"mes": "2024-07", "contagem": 1}, {"mes": "2024-08", "contagem": 27}, {"mes": "2024-09", "contagem": 6}, {"mes": "2024-11", "contagem": 12}, {"mes": "2024-12", "contagem": 5}, {"mes": "2025-01", "contagem": 9}, {"mes": "2025-02", "contagem": 9}, {"mes": "2025-03", "contagem": 6}, {"mes": "2025-04", "contagem": 12}
-          ],
-          "tipo_acidente": [
-            {"tipo": "Colisão transversal", "contagem": 92}, {"tipo": "Queda de ocupante de veículo", "contagem": 83}, {"tipo": "Tombamento", "contagem": 49}, {"tipo": "Colisão traseira", "contagem": 29}, {"tipo": "Colisão lateral mesmo sentido", "contagem": 13}
-          ],
-          "estado_fisico": [
-            {"estado": "Lesões Leves", "contagem": 146}, {"estado": "Lesões Graves", "contagem": 90}, {"estado": "Óbito", "contagem": 28}, {"estado": "Ileso", "contagem": 20}, {"estado": "Não Informado", "contagem": 15}
-          ],
-          "dia_semana": [
-            {"dia": "segunda-feira", "contagem": 39, "ordem": 0}, {"dia": "terça-feira", "contagem": 67, "ordem": 1}, {"dia": "quarta-feira", "contagem": 29, "ordem": 2}, {"dia": "quinta-feira", "contagem": 49, "ordem": 3}, {"dia": "sexta-feira", "contagem": 37, "ordem": 4}, {"dia": "sábado", "contagem": 43, "ordem": 5}, {"dia": "domingo", "contagem": 35, "ordem": 6}
-          ],
-          "hora_dia": [
-            {"hora": "01", "contagem": 2}, {"hora": "03", "contagem": 13}, {"hora": "04", "contagem": 5}, {"hora": "05", "contagem": 9}, {"hora": "06", "contagem": 8}, {"hora": "07", "contagem": 40}, {"hora": "08", "contagem": 22}, {"hora": "09", "contagem": 2}, {"hora": "10", "contagem": 10}, {"hora": "11", "contagem": 7}, {"hora": "12", "contagem": 11}, {"hora": "13", "contagem": 10}, {"hora": "14", "contagem": 14}, {"hora": "15", "contagem": 7}, {"hora": "16", "contagem": 24}, {"hora": "17", "contagem": 57}, {"hora": "18", "contagem": 12}, {"hora": "19", "contagem": 25}, {"hora": "20", "contagem": 5}, {"hora": "21", "contagem": 4}, {"hora": "22", "contagem": 2}, {"hora": "23", "contagem": 10}
-          ],
-          "fase_dia": [
-            {"fase": "Pleno dia", "contagem": 156}, {"fase": "Plena Noite", "contagem": 87}, {"fase": "Anoitecer", "contagem": 47}, {"fase": "Amanhecer", "contagem": 9}
-          ],
-          "causa_acidente": [
-            {"causa": "Acessar a via sem observar a presença dos outros veículos", "contagem": 93}, {"causa": "Transitar na contramão", "contagem": 23}, {"causa": "Reação tardia ou ineficiente do condutor", "contagem": 23}, {"causa": "Falta de Atenção à Condução", "contagem": 20}, {"causa": "Desobediência às normas de trânsito pelo condutor", "contagem": 12}, {"causa": "Ausência de reação do condutor", "contagem": 10}, {"causa": "Velocidade Incompatível", "contagem": 9}, {"causa": "Ingestão de Álcool", "contagem": 8}, {"causa": "Iluminação deficiente", "contagem": 8}, {"causa": "Ingestão de álcool pelo condutor", "contagem": 7}
-          ],
-          "condicao_meteo": [
-            {"condicao": "Céu Claro", "contagem": 177}, {"condicao": "Nublado", "contagem": 89}, {"condicao": "Chuva", "contagem": 19}, {"condicao": "Sol", "contagem": 11}, {"condicao": "Garoa/Chuvisco", "contagem": 3}
-          ],
-          "tipo_pista": [
-            {"tipo": "Dupla", "contagem": 178}, {"tipo": "Múltipla", "contagem": 105}, {"tipo": "Simples", "contagem": 16}
-          ],
-          "sexo": [
-            {"sexo": "Masculino", "contagem": 264}, {"sexo": "Feminino", "contagem": 20}, {"sexo": "Não Informado", "contagem": 15}
-          ],
-          "faixa_etaria": [
-            {"faixa": "46-60", "contagem": 90}, {"faixa": "31-45", "contagem": 83}, {"faixa": "19-30", "contagem": 58}, {"faixa": "0-18", "contagem": 17}, {"faixa": "61+", "contagem": 16}, {"faixa": "Não Informado", "contagem": 35}
-          ],
-          "evolucao_anual": [
-            {"ano": "2020", "contagem": 49}, {"ano": "2021", "contagem": 43}, {"ano": "2022", "contagem": 44}, {"ano": "2023", "contagem": 47}, {"ano": "2024", "contagem": 80}, {"ano": "2025", "contagem": 36}
-          ],
-          "distribuicao_mensal": [
-            {"mes": "01", "contagem": 29, "ordem": 0, "nome": "Jan"}, {"mes": "02", "contagem": 33, "ordem": 1, "nome": "Fev"}, {"mes": "03", "contagem": 25, "ordem": 2, "nome": "Mar"}, {"mes": "04", "contagem": 26, "ordem": 3, "nome": "Abr"}, {"mes": "05", "contagem": 15, "ordem": 4, "nome": "Mai"}, {"mes": "06", "contagem": 17, "ordem": 5, "nome": "Jun"}, {"mes": "07", "contagem": 17, "ordem": 6, "nome": "Jul"}, {"mes": "08", "contagem": 59, "ordem": 7, "nome": "Ago"}, {"mes": "09", "contagem": 21, "ordem": 8, "nome": "Set"}, {"mes": "10", "contagem": 15, "ordem": 9, "nome": "Out"}, {"mes": "11", "contagem": 18, "ordem": 10, "nome": "Nov"}, {"mes": "12", "contagem": 24, "ordem": 11, "nome": "Dez"}
-          ],
-          "comparativo_anual": [
-            {"ano": "2020", "estado": "Ileso", "contagem": 7}, {"ano": "2020", "estado": "Lesões Graves", "contagem": 9}, {"ano": "2020", "estado": "Lesões Leves", "contagem": 28}, {"ano": "2020", "estado": "Óbito", "contagem": 5}, {"ano": "2021", "estado": "Lesões Graves", "contagem": 17}, {"ano": "2021", "estado": "Lesões Leves", "contagem": 24}, {"ano": "2021", "estado": "Não Informado", "contagem": 2}, {"ano": "2022", "estado": "Lesões Graves", "contagem": 15}, {"ano": "2022", "estado": "Lesões Leves", "contagem": 16}, {"ano": "2022", "estado": "Não Informado", "contagem": 11}, {"ano": "2022", "estado": "Óbito", "contagem": 2}, {"ano": "2023", "estado": "Ileso", "contagem": 6}, {"ano": "2023", "estado": "Lesões Graves", "contagem": 15}, {"ano": "2023", "estado": "Lesões Leves", "contagem": 22}, {"ano": "2023", "estado": "Não Informado", "contagem": 1}, {"ano": "2023", "estado": "Óbito", "contagem": 3}, {"ano": "2024", "estado": "Ileso", "contagem": 1}, {"ano": "2024", "estado": "Lesões Graves", "contagem": 31}, {"ano": "2024", "estado": "Lesões Leves", "contagem": 33}, {"ano": "2024", "estado": "Não Informado", "contagem": 1}, {"ano": "2024", "estado": "Óbito", "contagem": 14}, {"ano": "2025", "estado": "Ileso", "contagem": 6}, {"ano": "2025", "estado": "Lesões Graves", "contagem": 3}, {"ano": "2025", "estado": "Lesões Leves", "contagem": 23}, {"ano": "2025", "estado": "Óbito", "contagem": 4}
-          ]
+        let rawData = {}; // Variável para armazenar ambos os datasets brutos
+        let preprocessedData = {
+            'data.json': [],
+            'raw_acidentes_ciclista_todos_anos.json': []
+        };
+        let aggregatedData = {}; // Variável para armazenar os dados agregados para os gráficos
+        let charts = {}; // Armazena as instâncias dos gráficos
+        let currentRawDataUrl = 'data.json'; // URL inicial dos dados brutos
+
+        // Helper para agrupar e contar
+        const groupBy = (array, key) => {
+            return array.reduce((result, currentValue) => {
+                (result[currentValue[key]] = result[currentValue[key]] || []).push(currentValue);
+                return result;
+            }, {});
         };
 
-        let charts = {}; // Store chart instances
-
-        // Chart Initialization Functions
+        // Funções de Inicialização de Gráficos (mantidas como antes)
         const createOrUpdateChart = (ctxId, type, data, options) => {
-            const ctx = document.getElementById(ctxId).getContext('2d');
-            if (charts[ctxId]) {
-                charts[ctxId].destroy(); // Destroy previous chart instance
+            const ctx = document.getElementById(ctxId);
+            if (!ctx) { // Check if canvas element exists
+                console.warn(`Canvas element with ID '${ctxId}' not found. Chart cannot be created.`);
+                return;
             }
-            charts[ctxId] = new Chart(ctx, { type, data, options });
+            const context = ctx.getContext('2d');
+            if (charts[ctxId]) {
+                charts[ctxId].destroy();
+            }
+            charts[ctxId] = new Chart(context, { type, data, options });
         };
 
-        // Data Processing and Chart Update Functions
+        // Helper para obter valor seguro, retornando 'Não Informado' ou 0 se nulo/indefinido
+        const safeGet = (item, prop, defaultValue = 'Não Informado') => {
+            return item && item[prop] !== undefined && item[prop] !== null && item[prop] !== '' ? item[prop] : defaultValue;
+        };
+        const safeGetNumber = (item, prop, defaultValue = 0) => {
+            const value = safeGet(item, prop, defaultValue);
+            return typeof value === 'number' ? value : parseFloat(value) || defaultValue;
+        };
+
+        const preprocessData = (rawDataList, sourceName) => {
+            const processedList = rawDataList.map((item, index) => {
+                const newItem = { ...item }; // Create a shallow copy
+
+                // Standardize ID
+                newItem.id = item.id || index; // Use existing id or array index
+
+                // Date and Time parsing
+                let dateObj = null;
+                // Determine the correct date field based on sourceName
+                const dateField = 'data_completa'; // Both use data_completa
+                if (item[dateField]) {
+                    try {
+                        const datePart = String(item[dateField]).split(' ')[0];
+                        dateObj = new Date(datePart + 'T00:00:00'); // Use 'T00:00:00' for consistent parsing as local date
+                    } catch (e) {
+                        console.error('Error parsing date:', item[dateField], e);
+                    }
+                }
+
+                if (dateObj && !isNaN(dateObj.getTime())) {
+                    newItem.ano = dateObj.getFullYear();
+                    newItem.mes_numero = dateObj.getMonth() + 1;
+                    newItem.mes_nome = dateObj.toLocaleString('pt-BR', { month: 'long' });
+                    newItem.dia_semana_nome = dateObj.toLocaleString('pt-BR', { weekday: 'long' });
+                } else {
+                    newItem.ano = 'Não Informado';
+                    newItem.mes_numero = 'Não Informado';
+                    newItem.mes_nome = 'Não Informado';
+                    newItem.dia_semana_nome = 'Não Informado';
+                }
+
+                // Hora limpa - ensure it's a number
+                if (item.hora_limpa !== undefined && item.hora_limpa !== null && item.hora_limpa !== '') {
+                    try {
+                        newItem.hora_limpa = parseInt(item.hora_limpa);
+                        if (isNaN(newItem.hora_limpa)) {
+                            newItem.hora_limpa = null;
+                        }
+                    } catch (e) {
+                        newItem.hora_limpa = null;
+                        console.error('Error parsing hora_limpa:', item.hora_limpa, e);
+                    }
+                } else {
+                    newItem.hora_limpa = null;
+                }
+
+                // Specific mappings/standardizations based on source
+                if (sourceName === 'raw_acidentes_ciclista_todos_anos.json') {
+                    newItem.tipo_acidente_desc = safeGet(item, 'tipo');
+                    newItem.causa_principal_acidente = safeGet(item, 'natureza_acidente');
+                    newItem.condicao_clima = safeGet(item, 'tempo_clima');
+                    newItem.tipo_pista = safeGet(item, 'condicao_via');
+                    newItem.sexo_vitima = safeGet(item, 'sexo_vitima', 'Não Informado');
+                    newItem.faixa_etaria = safeGet(item, 'faixa_etaria', 'Não Informado');
+
+                    // CORRECTED: Use existing vitimas_mortas and vitimas_total_nao_fatais
+                    newItem.vitimas_mortas = safeGetNumber(item, 'vitimas_mortas');
+                    newItem.vitimas_total_nao_fatais = safeGetNumber(item, 'vitimas_total_nao_fatais');
+
+                    // Infer estado_fisico_vitima from raw data
+                    if (newItem.vitimas_mortas > 0) {
+                        newItem.estado_fisico_vitima = 'Óbito';
+                    } else if (newItem.vitimas_total_nao_fatais > 0) {
+                        newItem.estado_fisico_vitima = 'Lesões'; // Grouping mild and severe injuries for this raw dataset
+                    } else {
+                        newItem.estado_fisico_vitima = 'Ileso';
+                    }
+
+                    // For maps, try to use provided lat/lon or set to null
+                    newItem.latitude = safeGetNumber(item, 'latitude', null);
+                    newItem.longitude = safeGetNumber(item, 'longitude', null);
+
+                } else if (sourceName === 'data.json') {
+                    // These fields are already well-defined in data.json based on prior processing
+                    newItem.tipo_acidente_desc = safeGet(item, 'tipo_acidente_desc');
+                    newItem.causa_principal_acidente = safeGet(item, 'causa_principal_acidente');
+                    newItem.condicao_clima = safeGet(item, 'condicao_clima');
+                    newItem.tipo_pista = safeGet(item, 'tipo_pista');
+                    newItem.sexo_vitima = safeGet(item, 'sexo_vitima');
+                    newItem.faixa_etaria = safeGet(item, 'faixa_etaria');
+                    newItem.estado_fisico_vitima = safeGet(item, 'estado_fisico_vitima');
+
+                    newItem.vitimas_mortas = safeGetNumber(item, 'vitimas_mortas');
+                    newItem.vitimas_feridos_leves = safeGetNumber(item, 'vitimas_feridos_leves');
+                    newItem.vitimas_feridos_graves = safeGetNumber(item, 'vitimas_feridos_graves');
+                    newItem.vitimas_total_nao_fatais = newItem.vitimas_feridos_leves + newItem.vitimas_feridos_graves;
+
+                    // Ensure latitude/longitude for data.json - assuming it exists or can be set to null
+                    newItem.latitude = safeGetNumber(item, 'latitude', null);
+                    newItem.longitude = safeGetNumber(item, 'longitude', null);
+                }
+
+                // Handle 'Nan' values which might be strings
+                for (const key in newItem) {
+                    if (typeof newItem[key] === 'string' && newItem[key].toLowerCase() === 'nan') {
+                        newItem[key] = 'Não Informado';
+                    }
+                }
+
+                return newItem;
+            });
+            console.log(`Preprocessed data for ${sourceName} (first 5):`, processedList.slice(0, 5));
+            console.log(`Total preprocessed items for ${sourceName}:`, processedList.length);
+            return processedList;
+        };
+
+        const getFaseDiaInferred = (hour) => {
+            if (hour === null || hour === 'Não Informado') return 'Não Informado';
+            const h = parseInt(hour);
+            if (isNaN(h)) return 'Não Informado';
+            if (h >= 5 && h < 12) return 'Amanhecer';
+            if (h >= 12 && h < 18) return 'Pleno Dia';
+            if (h >= 18 && h < 24) return 'Anoitecer';
+            return 'Plena Noite';
+        };
+
+        // --- Funções de Agregação (equivalentes ao script Python, agora em JS) ---
+        const aggregateData = (dataToAggregate, sourceName) => {
+            const currentAggregatedData = {};
+
+            // KPIs
+            currentAggregatedData.kpis = {};
+            currentAggregatedData.kpis.total_acidentes = dataToAggregate.length;
+
+            let obitos_count = 0;
+            let lesoes_graves_count = 0;
+            let vitimas_fatais_raw_count = 0;
+            let vitimas_nao_fatais_raw_count = 0;
+            let horario_critico_map = {};
+
+            dataToAggregate.forEach(item => {
+                // For Horário Crítico
+                const horaLimpa = safeGet(item, 'hora_limpa', null);
+                if (horaLimpa !== null && typeof horaLimpa === 'number') {
+                    const hour = String(horaLimpa).padStart(2, '0');
+                    horario_critico_map[hour] = (horario_critico_map[hour] || 0) + 1;
+                }
+
+                if (sourceName === 'data.json') {
+                    const vitimasMortas = safeGetNumber(item, 'vitimas_mortas');
+                    const vitimasFeridosLeves = safeGetNumber(item, 'vitimas_feridos_leves');
+                    const vitimasFeridosGraves = safeGetNumber(item, 'vitimas_feridos_graves');
+
+                    if (vitimasMortas > 0) {
+                        obitos_count += vitimasMortas;
+                    }
+                    lesoes_graves_count += (vitimasFeridosLeves + vitimasFeridosGraves);
+
+                } else if (sourceName === 'raw_acidentes_ciclista_todos_anos.json') {
+                    const vitimasMortasRaw = safeGetNumber(item, 'vitimas_mortas');
+                    const vitimasNaoFataisRaw = safeGetNumber(item, 'vitimas_total_nao_fatais');
+
+                    vitimas_fatais_raw_count += vitimasMortasRaw;
+                    vitimas_nao_fatais_raw_count += vitimasNaoFataisRaw;
+
+                    lesoes_graves_count += vitimasNaoFataisRaw; // Re-using this KPI for consistency
+                    obitos_count += vitimasMortasRaw; // Re-using this KPI for consistency
+                }
+            });
+
+            if (sourceName === 'data.json') {
+                currentAggregatedData.kpis.obitos = obitos_count;
+                currentAggregatedData.kpis.lesoes_graves = lesoes_graves_count;
+            } else { // raw_acidentes_ciclista_todos_anos.json
+                currentAggregatedData.kpis.acidentes_fatais_raw = vitimas_fatais_raw_count;
+                currentAggregatedData.kpis.acidentes_nao_fatais_raw = vitimas_nao_fatais_raw_count;
+            }
+
+            let criticalHour = 'N/A';
+            let criticalHourCount = 0;
+            if (Object.keys(horario_critico_map).length > 0) {
+                const sortedHours = Object.entries(horario_critico_map).sort((a, b) => b[1] - a[1]);
+                criticalHour = sortedHours[0][0];
+                criticalHourCount = sortedHours[0][1];
+            }
+            currentAggregatedData.kpis.horario_critico = criticalHour;
+            currentAggregatedData.kpis.horario_critico_count = criticalHourCount;
+
+
+            // General Aggregations (common for both or adapted)
+            // Evolução Mensal (for data.json) and Evolução Anual (for raw_acidentes_ciclista_todos_anos.json)
+            const evolucaoMensalMap = {};
+            const evolucaoAnualMap = {};
+            dataToAggregate.forEach(item => {
+                const year = safeGet(item, 'ano');
+                if (year !== 'Não Informado') {
+                    evolucaoAnualMap[year] = (evolucaoAnualMap[year] || 0) + 1;
+                }
+                const mesNumero = safeGet(item, 'mes_numero');
+                if (year !== 'Não Informado' && mesNumero !== 'Não Informado') {
+                    const yearMonth = `${year}-${String(mesNumero).padStart(2, '0')}`;
+                    evolucaoMensalMap[yearMonth] = (evolucaoMensalMap[yearMonth] || 0) + 1;
+                }
+            });
+            currentAggregatedData.evolucao_mensal = Object.keys(evolucaoMensalMap).sort().map(key => ({ mes: key, contagem: evolucaoMensalMap[key] }));
+            currentAggregatedData.evolucao_anual = Object.keys(evolucaoAnualMap).sort().map(key => ({ ano: String(key), contagem: evolucaoAnualMap[key] }));
+
+            // Top Bairros (for raw_acidentes_ciclista_todos_anos.json)
+            const topBairrosMap = {};
+            dataToAggregate.forEach(item => {
+                const bairro = safeGet(item, 'bairro');
+                if (bairro !== 'Não Informado') {
+                    topBairrosMap[bairro] = (topBairrosMap[bairro] || 0) + 1;
+                }
+            });
+            currentAggregatedData.top_bairros = Object.entries(topBairrosMap).map(([bairro, contagem]) => ({ bairro, contagem }))
+                .sort((a, b) => b.contagem - a.contagem).slice(0, 10); // Top 10 Bairros
+
+            // Tipo de Acidente
+            const tipoAcidenteMap = {};
+            dataToAggregate.forEach(item => {
+                const type = safeGet(item, 'tipo_acidente_desc');
+                tipoAcidenteMap[type] = (tipoAcidenteMap[type] || 0) + 1;
+            });
+            const tipoAcidenteList = Object.entries(tipoAcidenteMap).map(([tipo, contagem]) => ({ tipo, contagem }));
+            currentAggregatedData.tipo_acidente = tipoAcidenteList.sort((a, b) => b.contagem - a.contagem).slice(0, 10); // Top 10 for raw
+
+            // Estado Físico
+            const estadoFisicoMap = {};
+            // Prefer order for display, handle 'Lesões' and separate 'Lesões Leves'/'Lesões Graves'
+            let statesToProcess = [];
+            if (sourceName === 'data.json') {
+                statesToProcess = ["Lesões Leves", "Lesões Graves", "Óbito", "Ileso", "Não Informado"];
+            } else { // raw_acidentes_ciclista_todos_anos.json
+                statesToProcess = ["Lesões", "Óbito", "Ileso", "Não Informado"];
+            }
+
+            dataToAggregate.forEach(item => {
+                const estado = safeGet(item, 'estado_fisico_vitima');
+                estadoFisicoMap[estado] = (estadoFisicoMap[estado] || 0) + 1;
+            });
+
+            currentAggregatedData.estado_fisico = statesToProcess.map(estado => ({
+                estado: estado,
+                contagem: estadoFisicoMap[estado] || 0
+            })).filter(item => item.contagem > 0 || item.estado === 'Não Informado');
+
+
+            // Dia da Semana
+            const diaSemanaMap = {};
+            const diasOrdem = ['segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado', 'domingo'];
+            dataToAggregate.forEach(item => {
+                const dia = safeGet(item, 'dia_semana_nome');
+                diaSemanaMap[dia.toLowerCase()] = (diaSemanaMap[dia.toLowerCase()] || 0) + 1;
+            });
+            currentAggregatedData.dia_semana = diasOrdem.map((dia, index) => ({
+                dia: dia.charAt(0).toUpperCase() + dia.slice(1), // Capitalize first letter for display
+                contagem: diaSemanaMap[dia] || 0,
+                ordem: index
+            }));
+
+            // Hora do Dia
+            const horaDiaMap = {};
+            for (let i = 0; i < 24; i++) {
+                horaDiaMap[String(i).padStart(2, '0')] = 0;
+            }
+            dataToAggregate.forEach(item => {
+                const horaLimpa = safeGet(item, 'hora_limpa', null);
+                if (horaLimpa !== null) {
+                    const hora = String(horaLimpa).padStart(2, '0');
+                    horaDiaMap[hora] = (horaDiaMap[hora] || 0) + 1;
+                }
+            });
+            currentAggregatedData.hora_dia = Object.keys(horaDiaMap).sort().map(key => ({ hora: key, contagem: horaDiaMap[key] }));
+
+            // Fase do Dia
+            const faseDiaMap = {};
+            const faseDiaOrdem = ['Amanhecer', 'Pleno Dia', 'Anoitecer', 'Plena Noite', 'Não Informado'];
+            dataToAggregate.forEach(item => {
+                let fase = safeGet(item, 'fase_dia_acidente'); // Use preprocessed field if available
+                if (fase === 'Não Informado' || !fase) {
+                    fase = getFaseDiaInferred(safeGet(item, 'hora_limpa', null));
+                }
+                faseDiaMap[fase] = (faseDiaMap[fase] || 0) + 1;
+            });
+            currentAggregatedData.fase_dia = faseDiaOrdem.map(fase => ({
+                fase: fase,
+                contagem: faseDiaMap[fase] || 0
+            })).filter(item => item.contagem > 0 || item.fase === 'Não Informado');
+
+
+            // Causa do Acidente
+            const causaAcidenteMap = {};
+            dataToAggregate.forEach(item => {
+                const causa = safeGet(item, 'causa_principal_acidente');
+                causaAcidenteMap[causa] = (causaAcidenteMap[causa] || 0) + 1;
+            });
+            const causaAcidenteList = Object.entries(causaAcidenteMap).map(([causa, contagem]) => ({ causa, contagem }));
+            currentAggregatedData.causa_acidente = causaAcidenteList.sort((a, b) => b.contagem - a.contagem).slice(0, 10); // Top 10
+
+            // Condição Meteorológica
+            const condicaoMeteoMap = {};
+            dataToAggregate.forEach(item => {
+                const condicao = safeGet(item, 'condicao_clima');
+                condicaoMeteoMap[condicao] = (condicaoMeteoMap[condicao] || 0) + 1;
+            });
+            currentAggregatedData.condicao_meteo = Object.entries(condicaoMeteoMap).map(([condicao, contagem]) => ({ condicao, contagem }));
+
+            // Tipo de Pista / Condição da Via
+            const tipoPistaMap = {};
+            dataToAggregate.forEach(item => {
+                const tipoPista = safeGet(item, 'tipo_pista'); // Use preprocessed field
+                tipoPistaMap[tipoPista] = (tipoPistaMap[tipoPista] || 0) + 1;
+            });
+            currentAggregatedData.tipo_pista = Object.entries(tipoPistaMap).map(([tipo, contagem]) => ({ tipo, contagem }));
+
+            // Sexo
+            const sexoMap = {};
+            const sexoOrdem = ['Masculino', 'Feminino', 'Não Informado'];
+            dataToAggregate.forEach(item => {
+                const sexo = safeGet(item, 'sexo_vitima');
+                sexoMap[sexo] = (sexoMap[sexo] || 0) + 1;
+            });
+            currentAggregatedData.sexo = sexoOrdem.map(sexo => ({
+                sexo: sexo,
+                contagem: sexoMap[sexo] || 0
+            })).filter(item => item.contagem > 0 || item.sexo === 'Não Informado');
+
+
+            // Faixa Etária
+            const faixaEtariaMap = {};
+            const faixaEtariaOrdem = ['0-18', '19-30', '31-45', '46-60', '61+', 'Não Informado'];
+            dataToAggregate.forEach(item => {
+                const faixa = safeGet(item, 'faixa_etaria');
+                faixaEtariaMap[faixa] = (faixaEtariaMap[faixa] || 0) + 1;
+            });
+            currentAggregatedData.faixa_etaria = faixaEtariaOrdem.map(faixa => ({
+                faixa: faixa,
+                contagem: faixaEtariaMap[faixa] || 0
+            }));
+
+            // Distribuição Mensal (Total por mês)
+            const distribuicaoMensalMap = {};
+            const mesesOrdenados = [
+                { num: 1, nome: 'Janeiro' }, { num: 2, nome: 'Fevereiro' }, { num: 3, nome: 'Março' },
+                { num: 4, nome: 'Abril' }, { num: 5, nome: 'Maio' }, { num: 6, nome: 'Junho' },
+                { num: 7, nome: 'Julho' }, { num: 8, nome: 'Agosto' }, { num: 9, nome: 'Setembro' },
+                { num: 10, nome: 'Outubro' }, { num: 11, nome: 'Novembro' }, { num: 12, nome: 'Dezembro' }
+            ];
+            dataToAggregate.forEach(item => {
+                const monthNum = safeGet(item, 'mes_numero');
+                if (monthNum !== 'Não Informado') {
+                    distribuicaoMensalMap[monthNum] = (distribuicaoMensalMap[monthNum] || 0) + 1;
+                }
+            });
+            currentAggregatedData.distribuicao_mensal = mesesOrdenados.map((m, index) => ({
+                mes: String(m.num),
+                nome: m.nome,
+                contagem: distribuicaoMensalMap[m.num] || 0,
+                ordem: index
+            }));
+
+
+            // Comparativo Anual (Estado Físico)
+            const comparativoAnualMap = {};
+            dataToAggregate.forEach(item => {
+                const year = safeGet(item, 'ano');
+                const estado = safeGet(item, 'estado_fisico_vitima');
+
+                if (year !== 'Não Informado' && estado !== 'Não Informado') {
+                    if (!comparativoAnualMap[year]) {
+                        comparativoAnualMap[year] = {};
+                    }
+                    comparativoAnualMap[year][estado] = (comparativoAnualMap[year][estado] || 0) + 1;
+                }
+            });
+            currentAggregatedData.comparativo_anual = [];
+            Object.keys(comparativoAnualMap).sort().forEach(year => {
+                // Ensure expected states are present based on the source
+                let statesForYear = [];
+                if (sourceName === 'data.json') {
+                    statesForYear = ["Lesões Leves", "Lesões Graves", "Óbito", "Ileso"];
+                } else { // raw_acidentes_ciclista_todos_anos.json
+                    statesForYear = ["Lesões", "Óbito", "Ileso"];
+                }
+
+                statesForYear.forEach(estadoKey => {
+                    if (comparativoAnualMap[year][estadoKey] !== undefined) {
+                        currentAggregatedData.comparativo_anual.push({
+                            ano: year,
+                            estado: estadoKey,
+                            contagem: comparativoAnualMap[year][estadoKey]
+                        });
+                    }
+                });
+                // Also add 'Não Informado' if it exists for the year
+                if (comparativoAnualMap[year]['Não Informado'] !== undefined) {
+                    currentAggregatedData.comparativo_anual.push({
+                        ano: year,
+                        estado: 'Não Informado',
+                        contagem: comparativoAnualMap[year]['Não Informado']
+                    });
+                }
+            });
+
+            // Acidentes Fatais vs Não Fatais (for raw_acidentes_ciclista_todos_anos.json)
+            const fataisNaoFataisMap = { 'Fatais': 0, 'Não Fatais': 0 };
+            dataToAggregate.forEach(item => {
+                fataisNaoFataisMap['Fatais'] += safeGetNumber(item, 'vitimas_mortas');
+                fataisNaoFataisMap['Não Fatais'] += safeGetNumber(item, 'vitimas_total_nao_fatais');
+            });
+            currentAggregatedData.fatais_nao_fatais = [
+                { tipo: 'Fatais', contagem: fataisNaoFataisMap['Fatais'] },
+                { tipo: 'Não Fatais', contagem: fataisNaoFataisMap['Não Fatais'] }
+            ];
+
+            // Variação de Acidentes por Faixa Etária ao Longo dos Anos (raw)
+            const variacaoFaixaEtariaMap = {};
+            const faixaEtariaOrderForTrend = ['0-18', '19-30', '31-45', '46-60', '61+', 'Não Informado'];
+
+            dataToAggregate.forEach(item => {
+                const year = safeGet(item, 'ano');
+                const faixa = safeGet(item, 'faixa_etaria');
+                if (year !== 'Não Informado' && faixa !== 'Não Informado') {
+                    if (!variacaoFaixaEtariaMap[year]) {
+                        variacaoFaixaEtariaMap[year] = {};
+                    }
+                    variacaoFaixaEtariaMap[year][faixa] = (variacaoFaixaEtariaMap[year][faixa] || 0) + 1;
+                }
+            });
+            currentAggregatedData.variacao_faixa_etaria = [];
+            const sortedYearsForTrend = Object.keys(variacaoFaixaEtariaMap).sort();
+
+            sortedYearsForTrend.forEach(year => {
+                faixaEtariaOrderForTrend.forEach(faixa => { // Ensure all age groups are represented
+                    currentAggregatedData.variacao_faixa_etaria.push({
+                        ano: year,
+                        faixa: faixa,
+                        contagem: variacaoFaixaEtariaMap[year] ? (variacaoFaixaEtariaMap[year][faixa] || 0) : 0
+                    });
+                });
+            });
+
+
+            // Proporção de Acidentes Fatais vs Não Fatais por Ano (raw)
+            const proporcaoFataisNaoFataisAnualMap = {};
+            dataToAggregate.forEach(item => {
+                const year = safeGet(item, 'ano');
+                if (year !== 'Não Informado') {
+                    if (!proporcaoFataisNaoFataisAnualMap[year]) {
+                        proporcaoFataisNaoFataisAnualMap[year] = { fatals: 0, non_fatals: 0 };
+                    }
+                    proporcaoFataisNaoFataisAnualMap[year].fatals += safeGetNumber(item, 'vitimas_mortas');
+                    proporcaoFataisNaoFataisAnualMap[year].non_fatals += safeGetNumber(item, 'vitimas_total_nao_fatais');
+                }
+            });
+            currentAggregatedData.proporcao_fatais_nao_fatais_anual = Object.keys(proporcaoFataisNaoFataisAnualMap).sort().map(year => ({
+                ano: year,
+                fatais: proporcaoFataisNaoFataisAnualMap[year].fatals,
+                nao_fatais: proporcaoFataisNaoFataisAnualMap[year].non_fatals
+            }));
+
+
+            // Evolução do Número de Acidentes por Sexo da Vítima (raw)
+            const evolucaoSexoVitimaMap = {};
+            const sexoOrderForTrend = ['Masculino', 'Feminino', 'Não Informado'];
+
+            dataToAggregate.forEach(item => {
+                const year = safeGet(item, 'ano');
+                const sexo = safeGet(item, 'sexo_vitima');
+                if (year !== 'Não Informado' && sexo !== 'Não Informado') {
+                    if (!evolucaoSexoVitimaMap[year]) {
+                        evolucaoSexoVitimaMap[year] = {};
+                    }
+                    evolucaoSexoVitimaMap[year][sexo] = (evolucaoSexoVitimaMap[year][sexo] || 0) + 1;
+                }
+            });
+            currentAggregatedData.evolucao_sexo_vitima = [];
+            const sortedYearsForSexoTrend = Object.keys(evolucaoSexoVitimaMap).sort();
+
+            sortedYearsForSexoTrend.forEach(year => {
+                sexoOrderForTrend.forEach(sexo => {
+                    currentAggregatedData.evolucao_sexo_vitima.push({
+                        ano: year,
+                        sexo: sexo,
+                        contagem: evolucaoSexoVitimaMap[year] ? (evolucaoSexoVitimaMap[year][sexo] || 0) : 0
+                    });
+                });
+            });
+
+            // Comparativo de Tipos de Acidente ao Longo dos Anos (Top 5) (raw)
+            const comparativoTipoAcidenteAnualMap = {};
+            dataToAggregate.forEach(item => {
+                const year = safeGet(item, 'ano');
+                const tipo = safeGet(item, 'tipo_acidente_desc');
+                if (year !== 'Não Informado' && tipo !== 'Não Informado') {
+                    if (!comparativoTipoAcidenteAnualMap[year]) {
+                        comparativoTipoAcidenteAnualMap[year] = {};
+                    }
+                    comparativoTipoAcidenteAnualMap[year][tipo] = (comparativoTipoAcidenteAnualMap[year][tipo] || 0) + 1;
+                }
+            });
+
+            // Determine top 5 types globally across all years for consistent series
+            const allTypesCount = {};
+            dataToAggregate.forEach(item => {
+                const type = safeGet(item, 'tipo_acidente_desc');
+                allTypesCount[type] = (allTypesCount[type] || 0) + 1;
+            });
+            const top5Types = Object.entries(allTypesCount)
+                .sort(([, countA], [, countB]) => countB - countA)
+                .slice(0, 5)
+                .map(([type]) => type);
+
+            currentAggregatedData.comparativo_tipo_acidente_anual = {
+                years: Object.keys(comparativoTipoAcidenteAnualMap).sort(),
+                types: top5Types,
+                data: {}
+            };
+            top5Types.forEach(type => {
+                currentAggregatedData.comparativo_tipo_acidente_anual.data[type] = currentAggregatedData.comparativo_tipo_acidente_anual.years.map(year => {
+                    return comparativoTipoAcidenteAnualMap[year] ? (comparativoTipoAcidenteAnualMap[year][type] || 0) : 0;
+                });
+            });
+            console.log(`Aggregated data for ${sourceName} (KPIs, evolucao_anual, tipo_acidente):`, currentAggregatedData.kpis, currentAggregatedData.evolucao_anual.slice(0, 2), currentAggregatedData.tipo_acidente.slice(0, 2));
+
+            return currentAggregatedData;
+        };
+
+        // Função principal para atualizar todos os elementos do dashboard
+        const updateDashboard = () => {
+            // Esconde todo o conteúdo do dashboard inicialmente
+            document.querySelectorAll('.dashboard-content').forEach(el => el.classList.remove('active'));
+
+            if (!aggregatedData || Object.keys(aggregatedData).length === 0) {
+                console.warn("Dados agregados vazios ou não carregados.");
+                return;
+            }
+
+            if (currentRawDataUrl === 'data.json') {
+                document.querySelectorAll('.data-json-charts').forEach(el => el.classList.add('active'));
+                updateKPIs(); // Usa os KPIs originais
+                updateEvolucaoMensalChart();
+                updateTipoAcidenteChart();
+                updateEstadoFisicoGeralChart();
+                updateDiaSemanaGeralChart();
+                updateHorasDiaChart();
+                updateFaseDiaChart();
+                updateDiaSemanaChart();
+                updateTipoAcidentePerfilChart();
+                updateCausaAcidenteChart();
+                updateCondicaoMeteoChart();
+                updateTipoPistaChart();
+                updateEstadoFisicoVitimasChart();
+                updateSexoChart();
+                updateIdadeChart();
+                updateEvolucaoAnualChart();
+                updateDistribuicaoMensalChart();
+                updateComparativoAnualChart();
+            } else if (currentRawDataUrl === 'raw_acidentes_ciclista_todos_anos.json') {
+                document.querySelectorAll('.raw-json-charts').forEach(el => el.classList.add('active'));
+                updateKPIsRaw();
+                // Visão Geral / Panorama Geral
+                updateRawVisaoGeralAnoChart();
+                updateRawVisaoGeralBairroChart();
+                updateRawVisaoGeralDiaSemanaChart();
+                // Horários / Distribuição Temporal
+                updateRawHorariosHoraChart();
+                updateRawHorariosFaseDiaChart();
+                // O gráfico rawHorariosHeatmapChart foi removido
+                updateRawHorariosHeatmapChart();
+                // Detalhes dos Acidentes
+                // O gráfico rawDetalhesTipoAcidenteChart e rawDetalhesVitimasChart foram removidos
+                // updateRawDetalhesTipoAcidenteChart(); // Não chame esta função se o gráfico foi removido
+                // updateRawDetalhesVitimasChart(); // Não chame esta função se o gráfico foi removido
+                updateRawDetalhesEstadoFisicoChart();
+                // Evolução Temporal
+                updateRawTendenciasMensalChart();
+                // O gráfico rawTendenciasMensalBairroHeatmapChart foi removido
+                // updateRawTendenciasMensalBairroHeatmapChart(); // Não chame esta função se o gráfico foi removido
+                updateRawTendenciasFataisNaoFataisAnualChart();
+            }
+        };
+
+        // Funções de atualização dos gráficos (agora no escopo global)
+        const updateKPIsRaw = () => {
+            const kpis = aggregatedData.kpis;
+            document.getElementById('kpi-total-acidentes-raw').textContent = kpis.total_acidentes;
+            document.getElementById('kpi-acidentes-fatais-raw').textContent = kpis.acidentes_fatais_raw;
+            document.getElementById('kpi-acidentes-nao-fatais-raw').textContent = kpis.acidentes_nao_fatais_raw;
+            document.getElementById('kpi-horario-critico-raw').textContent = `${kpis.horario_critico}h (${kpis.horario_critico_count})`;
+        };
+
         const updateKPIs = () => {
             const kpis = aggregatedData.kpis;
             document.getElementById('kpi-total-acidentes').textContent = kpis.total_acidentes;
@@ -649,7 +1599,7 @@
                 datasets: [{
                     data: data.map(item => item.contagem),
                     backgroundColor: [
-                        'rgba(59, 130, 246, 0.7)', // Lesões Leves
+                        'rgba(59, 130, 246, 0.7)', // Lesões Leves (ou Lesões)
                         'rgba(245, 158, 11, 0.7)', // Lesões Graves
                         'rgba(220, 38, 38, 0.7)', // Óbito
                         'rgba(22, 163, 74, 0.7)', // Ileso
@@ -691,17 +1641,20 @@
         };
 
         const updateFaseDiaChart = () => {
-            const data = aggregatedData.fase_dia;
+            const data = aggregatedData.fase_dia
+                .filter(item => item.fase !== 'Não Informado')
+                .sort((a, b) => b.contagem - a.contagem);
             const chartData = {
                 labels: data.map(item => item.fase),
                 datasets: [{
                     label: 'Contagem',
                     data: data.map(item => item.contagem),
                     backgroundColor: [
-                        'rgba(22, 163, 74, 0.7)', // Pleno dia
+                        'rgba(22, 163, 74, 0.7)',  // Pleno dia
                         'rgba(30, 58, 138, 0.7)',  // Plena noite
                         'rgba(59, 130, 246, 0.7)', // Anoitecer
-                        'rgba(245, 158, 11, 0.7)' // Amanhecer
+                        'rgba(245, 158, 11, 0.7)',  // Amanhecer
+                        'rgba(100, 116, 139, 0.7)' // Não Informado
                     ]
                 }]
             };
@@ -724,9 +1677,7 @@
         };
 
         const updateTipoAcidentePerfilChart = () => {
-            // Use the same data as the general view, but maybe show more types if needed
-            const data = aggregatedData.tipo_acidente; // Using top 5 for consistency
-            const allTypes = aggregatedData.evolucao_mensal.reduce((acc, curr) => acc + curr.contagem, 0); // Placeholder for all types if needed
+            const data = aggregatedData.tipo_acidente;
             const chartData = {
                 labels: data.map(item => item.tipo),
                 datasets: [{
@@ -766,7 +1717,8 @@
                         'rgba(100, 116, 139, 0.7)', // Nublado
                         'rgba(30, 58, 138, 0.7)', // Chuva
                         'rgba(245, 158, 11, 0.7)', // Sol
-                        'rgba(168, 162, 158, 0.7)' // Garoa/Chuvisco
+                        'rgba(168, 162, 158, 0.7)', // Garoa/Chuvisco
+                        'rgba(200, 200, 200, 0.7)' // Não Informado
                     ]
                 }]
             };
@@ -783,7 +1735,8 @@
                     backgroundColor: [
                         'rgba(59, 130, 246, 0.7)',
                         'rgba(245, 158, 11, 0.7)',
-                        'rgba(22, 163, 74, 0.7)'
+                        'rgba(22, 163, 74, 0.7)',
+                        'rgba(100, 116, 139, 0.7)' // Para "Não Informado"
                     ]
                 }]
             };
@@ -798,7 +1751,7 @@
                     label: 'Contagem',
                     data: data.map(item => item.contagem),
                     backgroundColor: [
-                        'rgba(59, 130, 246, 0.7)', // Lesões Leves
+                        'rgba(59, 130, 246, 0.7)', // Lesões Leves (ou Lesões)
                         'rgba(245, 158, 11, 0.7)', // Lesões Graves
                         'rgba(220, 38, 38, 0.7)', // Óbito
                         'rgba(22, 163, 74, 0.7)', // Ileso
@@ -880,7 +1833,8 @@
                 'Lesões Graves': 'rgba(245, 158, 11, 0.7)',
                 'Óbito': 'rgba(220, 38, 38, 0.7)',
                 'Ileso': 'rgba(22, 163, 74, 0.7)',
-                'Não Informado': 'rgba(100, 116, 139, 0.7)'
+                'Não Informado': 'rgba(100, 116, 139, 0.7)',
+                'Lesões': 'rgba(59, 130, 246, 0.7)'
             };
 
             const datasets = states.map(state => ({
@@ -890,7 +1844,7 @@
                     return record ? record.contagem : 0;
                 }),
                 backgroundColor: stateColors[state],
-                borderColor: stateColors[state].replace('0.7', '1'),
+                borderColor: stateColors[state] ? stateColors[state].replace('0.7', '1') : 'rgba(0,0,0,0.5)',
                 borderWidth: 1
             }));
 
@@ -898,59 +1852,679 @@
             createOrUpdateChart('comparativoAnualChart', 'bar', chartData, { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true } } });
         };
 
-        // Update all dashboard elements
-        const updateDashboard = () => {
-            updateKPIs();
-            // Visão Geral
-            updateEvolucaoMensalChart();
-            updateTipoAcidenteChart();
-            updateEstadoFisicoGeralChart();
-            updateDiaSemanaGeralChart();
-            // Horários
-            updateHorasDiaChart();
-            updateFaseDiaChart();
-            updateDiaSemanaChart();
-            // Perfil Acidentes
-            updateTipoAcidentePerfilChart();
-            updateCausaAcidenteChart();
-            updateCondicaoMeteoChart();
-            updateTipoPistaChart();
-            // Vítimas
-            updateEstadoFisicoVitimasChart();
-            updateSexoChart();
-            updateIdadeChart();
-            // Tendências
-            updateEvolucaoAnualChart();
-            updateDistribuicaoMensalChart();
-            updateComparativoAnualChart();
+        // --- Novas Funções de Gráficos para raw_acidentes_ciclista_todos_anos.json ---
+
+        // 📊 Aba: Visão Geral (Panorama Geral)
+        const updateRawVisaoGeralAnoChart = () => {
+            const data = aggregatedData.evolucao_anual; // Reutiliza evolucao_anual
+            const chartData = {
+                labels: data.map(item => item.ano),
+                datasets: [{
+                    label: 'Acidentes por Ano',
+                    data: data.map(item => item.contagem),
+                    borderColor: 'var(--secondary-color)',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            };
+            createOrUpdateChart('rawVisaoGeralAnoChart', 'line', chartData, { responsive: true, maintainAspectRatio: false });
         };
 
-        // Navigation and Event Listeners
-        document.addEventListener('DOMContentLoaded', function() {
+        const updateRawVisaoGeralBairroChart = () => {
+            const data = aggregatedData.top_bairros;
+            const chartData = {
+                labels: data.map(item => item.bairro),
+                datasets: [{
+                    label: 'Contagem',
+                    data: data.map(item => item.contagem),
+                    backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                    borderColor: 'var(--secondary-color)',
+                    borderWidth: 1
+                }]
+            };
+            createOrUpdateChart('rawVisaoGeralBairroChart', 'bar', chartData, { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } });
+        };
+
+        const updateRawVisaoGeralDiaSemanaChart = () => {
+            const data = aggregatedData.dia_semana;
+            const chartData = {
+                labels: data.map(item => item.dia),
+                datasets: [{
+                    label: 'Contagem',
+                    data: data.map(item => item.contagem),
+                    backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                    borderColor: 'var(--secondary-color)',
+                    borderWidth: 1
+                }]
+            };
+            createOrUpdateChart('rawVisaoGeralDiaSemanaChart', 'bar', chartData, { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } });
+        };
+
+        // 🕒 Aba: Horários (Distribuição Temporal)
+        const updateRawHorariosHoraChart = () => {
+            const data = aggregatedData.hora_dia;
+            const chartData = {
+                labels: data.map(item => `${item.hora}h`),
+                datasets: [{
+                    label: 'Número de Acidentes',
+                    data: data.map(item => item.contagem),
+                    backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                    borderColor: 'var(--secondary-color)',
+                    borderWidth: 1
+                }]
+            };
+            createOrUpdateChart('rawHorariosHoraChart', 'bar', chartData, { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } });
+        };
+
+        const updateRawHorariosFaseDiaChart = () => {
+            const data = aggregatedData.fase_dia;
+            const chartData = {
+                labels: data.map(item => item.fase),
+                datasets: [{
+                    label: 'Contagem',
+                    data: data.map(item => item.contagem),
+                    backgroundColor: [
+                        'rgba(22, 163, 74, 0.7)',  // Pleno Dia
+                        'rgba(30, 58, 138, 0.7)',  // Plena Noite
+                        'rgba(59, 130, 246, 0.7)', // Anoitecer
+                        'rgba(245, 158, 11, 0.7)',  // Amanhecer
+                        'rgba(200, 200, 200, 0.7)' // Não Informado
+                    ]
+                }]
+            };
+            createOrUpdateChart('rawHorariosFaseDiaChart', 'pie', chartData, { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right' } } });
+        };
+
+        const updateRawHorariosHeatmapChart = () => {
+            // CORREÇÃO: Usar filteredData para garantir que o heatmap respeite os filtros
+            const data = filteredData;
+            const heatMapData = {};
+
+            const hours = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'));
+            const daysOrder = ['domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado'];
+
+            hours.forEach(hour => {
+                daysOrder.forEach(day => {
+                    if (!heatMapData[day]) heatMapData[day] = {};
+                    heatMapData[day][hour] = 0;
+                });
+            });
+
+            data.forEach(item => {
+                const hour = safeGet(item, 'hora_limpa', null);
+                const day = safeGet(item, 'dia_semana_nome', 'Não Informado');
+                if (hour !== null && day !== 'Não Informado') {
+                    const h = String(hour).padStart(2, '0');
+                    const d = day.toLowerCase();
+                    if (heatMapData[d] && heatMapData[d][h] !== undefined) {
+                        heatMapData[d][h]++;
+                    }
+                }
+            });
+
+            const allCounts = Object.values(heatMapData).flatMap(dayData => Object.values(dayData));
+            let maxVal = Math.max(...allCounts);
+            let minVal = Math.min(...allCounts);
+            if (minVal === maxVal) {
+                if (maxVal === 0) {
+                    maxVal = 1;
+                    minVal = 0;
+                } else {
+                    minVal = 0;
+                }
+            }
+
+            // Definir uma paleta de cores base para cada dia da semana
+            const baseColorsPalette = [
+                '#3b82f6', // Azul (Segunda)
+                '#16a34a', // Verde (Terça)
+                '#f59e0b', // Amarelo/Laranja (Quarta)
+                '#dc2626', // Vermelho (Quinta)
+                '#8b5cf6', // Roxo (Sexta)
+                '#06b6d4', // Ciano (Sábado)
+                '#ef4444'  // Vermelho Claro (Domingo)
+            ];
+            createOrUpdateChart('rawHorariosHeatmapChart', 'bar', {
+                labels: hours.map(h => `${h}h`),
+                datasets: daysOrder.map((day, index) => ({
+                    label: day.charAt(0).toUpperCase() + day.slice(1),
+                    data: hours.map(h => heatMapData[day][h]),
+                    backgroundColor: (ctx) => {
+                        const value = ctx.parsed.y;
+                        const alpha = value === 0 ? 0 : Math.max(0.2, (value - minVal) / (maxVal - minVal + 1e-9));
+                        const baseColor = baseColorsPalette[index % baseColorsPalette.length];
+                        return Chart.helpers.color(baseColor).alpha(alpha).rgbString();
+                    },
+                    stack: 'day-time-stack',
+                    categoryPercentage: 1.0,
+                    barPercentage: 1.0,
+                })),
+            }, {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        stacked: true,
+                        grid: { display: false },
+                        ticks: { autoSkip: false, maxRotation: 90, minRotation: 0 },
+                    },
+                    y: {
+                        stacked: true,
+                        grid: { display: false },
+                        ticks: { display: false },
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'right',
+                        onClick: (e, legendItem, legend) => {
+                            // Mantém o comportamento padrão de mostrar/esconder o dataset
+                            const index = legendItem.datasetIndex;
+                            const ci = legend.chart;
+                            if (ci.isDatasetVisible(index)) {
+                                ci.hide(index);
+                                legendItem.hidden = true;
+                            } else {
+                                ci.show(index);
+                                legendItem.hidden = false;
+                            }
+                        },
+                        labels: {
+                            generateLabels: function (chart) {
+                                const datasets = chart.data.datasets;
+                                return datasets.map((dataset, i) => {
+                                    const baseColorForLegend = baseColorsPalette[i % baseColorsPalette.length];
+                                    return {
+                                        text: dataset.label,
+                                        fillStyle: baseColorForLegend,
+                                        strokeStyle: baseColorForLegend,
+                                        lineWidth: 1,
+                                        hidden: !chart.isDatasetVisible(i),
+                                        datasetIndex: i // Isso é importante para o funcionamento do clique
+                                    };
+                                });
+                            }
+                        }
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false,
+                        callbacks: {
+                            label: function (context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                if (context.parsed.y !== null) {
+                                    label += context.parsed.y;
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                }
+            });
+        };
+
+
+        // 🚧 Aba: Detalhes dos Acidentes (Perfil dos Acidentes)
+        // updateRawDetalhesTipoAcidenteChart foi removido
+
+        const updateRawDetalhesVitimasChart = () => {
+            const data = aggregatedData.fatais_nao_fatais;
+            const chartData = {
+                labels: data.map(item => item.tipo),
+                datasets: [{
+                    label: 'Contagem de Acidentes',
+                    data: data.map(item => item.contagem),
+                    backgroundColor: [
+                        'rgba(220, 38, 38, 0.7)', // Fatais
+                        'rgba(59, 130, 246, 0.7)'  // Não Fatais
+                    ],
+                    borderColor: [
+                        'rgba(220, 38, 38, 1)',
+                        'rgba(59, 130, 246, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            };
+            createOrUpdateChart('rawDetalhesVitimasChart', 'bar', chartData, { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } });
+        };
+
+        const updateRawDetalhesEstadoFisicoChart = () => {
+            // Filtrar 'Não Informado' se não for o único valor
+            const filteredEstadoFisicoData = aggregatedData.estado_fisico.filter(item => item.estado !== 'Não Informado');
+            // Usar os dados filtrados se existirem, caso contrário, usar os dados originais (que podem incluir 'Não Informado' se for a única opção)
+            const data = filteredEstadoFisicoData.length > 0 ? filteredEstadoFisicoData : aggregatedData.estado_fisico;
+
+            const chartData = {
+                labels: data.map(item => item.estado),
+                datasets: [{
+                    label: 'Contagem',
+                    data: data.map(item => item.contagem),
+                    backgroundColor: [
+                        'rgba(59, 130, 246, 0.7)', // Lesões
+                        'rgba(245, 158, 11, 0.7)', // Óbito - ajustado para o contexto de 'Lesões' e 'Óbito'
+                        'rgba(220, 38, 38, 0.7)', // Ileso
+                        'rgba(22, 163, 74, 0.7)' // Outros ou Não Informado (se acabar sendo incluído por algum motivo)
+                    ]
+                }]
+            };
+            createOrUpdateChart('rawDetalhesEstadoFisicoChart', 'bar', chartData, { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } });
+        };
+
+        // REMOVIDA: Aba: Vítimas (Impacto nas Vítimas) quando dataset raw-json-charts
+        // Funções relacionadas foram removidas pois os gráficos não existem mais nessa aba para este dataset
+        /*
+        const updateRawImpactoSexoVitimaChart = () => { ... };
+        const updateRawImpactoFaixaEtariaChart = () => { ... ;
+        const updateRawImpactoFataisNaoFataisChart = () => { ... };
+        */
+
+        // 📈 Aba: Tendências Temporais (Evolução Temporal)
+        const updateRawTendenciasMensalChart = () => {
+            const data = aggregatedData.evolucao_mensal;
+            const chartData = {
+                labels: data.map(item => item.mes),
+                datasets: [{
+                    label: 'Acidentes por Mês',
+                    data: data.map(item => item.contagem),
+                    borderColor: 'var(--secondary-color)',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    tension: 0.4,
+                    fill: true
+                }]
+            };
+            createOrUpdateChart('rawTendenciasMensalChart', 'line', chartData, { responsive: true, maintainAspectRatio: false });
+        };
+
+        // updateRawTendenciasMensalBairroHeatmapChart foi removido
+
+
+        const updateRawTendenciasFataisNaoFataisAnualChart = () => {
+            const data = aggregatedData.proporcao_fatais_nao_fatais_anual;
+            const years = data.map(item => item.ano);
+
+            const chartData = {
+                labels: years,
+                datasets: [
+                    {
+                        label: 'Fatais',
+                        data: data.map(item => item.fatais),
+                        backgroundColor: 'rgba(220, 38, 38, 0.7)',
+                        borderColor: 'rgba(220, 38, 38, 1)',
+                        borderWidth: 1
+                    },
+                    {
+                        label: 'Não Fatais',
+                        data: data.map(item => item.nao_fatais),
+                        backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        borderWidth: 1
+                    }
+                ]
+            };
+            createOrUpdateChart('rawTendenciasFataisNaoFataisAnualChart', 'bar', chartData, {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { stacked: true },
+                    y: { stacked: true }
+                }
+            });
+        };
+
+
+        // Função para carregar os dados de uma URL específica
+        const loadData = (url) => {
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Erro HTTP! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    preprocessedData[url] = preprocessData(data, url);
+                    currentRawDataUrl = url;
+                    console.log(`Dados carregados e pré-processados para ${url}.`);
+
+                    // Limpa os filtros existentes antes de popular com os novos dados
+                    document.getElementById('filter-ano').value = 'todos';
+                    document.getElementById('filter-mes').value = 'todos';
+                    document.getElementById('filter-dia-semana').value = 'todos';
+                    document.getElementById('filter-fase-dia').value = 'todos';
+                    document.getElementById('filter-tipo-acidente').value = 'todos';
+                    document.getElementById('filter-estado-fisico').value = 'todos';
+                    document.getElementById('filter-condicao-meteo').value = 'todos';
+                    document.getElementById('filter-bairro').value = 'todos';
+                    document.getElementById('filter-sexo').value = 'todos';
+                    document.getElementById('filter-faixa-etaria').value = 'todos';
+                    document.getElementById('filter-causa-acidente').value = 'todos';
+
+                    // Popula os filtros com base nos DADOS PRÉ-PROCESSADOS da fonte atual
+                    populateFilters(preprocessedData[currentRawDataUrl]);
+                    // Aplica filtros (inicialmente 'Todos') e renderiza
+                    applyFiltersAndRenderCharts();
+                    // Atualiza nomes das abas
+                    updateTabNames(currentRawDataUrl);
+
+                    // Adicionar uma chamada para carregar dados dos mapas quando a fonte muda
+                    loadMapData(preprocessedData[currentRawDataUrl]);
+
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar os dados:', error);
+                    alert(`Não foi possível carregar os dados de ${url}. Verifique o arquivo JSON ou o console para mais detalhes.`);
+                });
+        };
+
+        // Função para carregar dados para os iframes dos mapas
+        const loadMapData = (data) => {
+            const mapaAcidentesIframe = document.getElementById('mapa_acidentes');
+            const mapaCalorAcidentesIframe = document.getElementById('mapa_calor_acidentes');
+
+            // Envia os dados para os iframes se eles estiverem prontos
+            if (mapaAcidentesIframe.contentWindow) {
+                mapaAcidentesIframe.contentWindow.postMessage({ type: 'loadMapData', payload: data }, '*');
+                console.log('Dados enviados para mapa_acidentes.html');
+            }
+            if (mapaCalorAcidentesIframe.contentWindow) {
+                mapaCalorAcidentesIframe.contentWindow.postMessage({ type: 'loadMapData', payload: data }, '*');
+                console.log('Dados enviados para mapa_calor_acidentes.html');
+            }
+        };
+
+        // Função para atualizar os nomes das abas com base no dataset selecionado
+        const updateTabNames = (sourceUrl) => {
+            const menuItems = document.querySelectorAll('.sidebar-menu .menu-item');
+            menuItems.forEach(item => {
+                const span = item.querySelector('span');
+                const hideForRaw = item.getAttribute('data-hide-for-raw') === 'true';
+
+                if (span) {
+                    if (sourceUrl === 'raw_acidentes_ciclista_todos_anos.json') {
+                        // Se for para esconder no dataset raw
+                        if (hideForRaw) {
+                            item.style.display = 'none'; // Esconde o item de menu
+                        } else {
+                            item.style.display = 'flex'; // Garante que outros itens estejam visíveis
+                        }
+
+                        const rawName = span.getAttribute('data-tab-name-raw');
+                        if (rawName) {
+                            span.textContent = rawName;
+                        }
+                    } else { // Default to data.json names
+                        item.style.display = 'flex'; // Garante que o item esteja visível para data.json
+                        const dataName = span.getAttribute('data-tab-name-data');
+                        if (dataName) {
+                            span.textContent = dataName;
+                        }
+                    }
+                }
+            });
+
+            // Se a aba atualmente ativa for a que foi ocultada, mude para a primeira aba visível
+            const activeTab = document.querySelector('.menu-item.active');
+            if (activeTab && activeTab.style.display === 'none') {
+                const firstVisibleMenuItem = document.querySelector('.sidebar-menu .menu-item[style*="display: flex"]');
+                if (firstVisibleMenuItem) {
+                    firstVisibleMenuItem.click();
+                }
+            }
+        };
+
+        // Função para aplicar os filtros e renderizar os gráficos
+        let filteredData = []; // Variável global para armazenar os dados filtrados
+        const applyFiltersAndRenderCharts = () => {
+            filteredData = [...preprocessedData[currentRawDataUrl]]; // Começa com uma cópia dos dados pré-processados da fonte atual
+
+            // Obter os valores selecionados dos filtros
+            const selectedAno = document.getElementById('filter-ano').value;
+            const selectedMes = document.getElementById('filter-mes').value; // Nome do mês
+            const selectedDiaSemana = document.getElementById('filter-dia-semana').value;
+            const selectedFaseDia = document.getElementById('filter-fase-dia').value;
+            const selectedTipoAcidente = document.getElementById('filter-tipo-acidente').value;
+            const selectedEstadoFisico = document.getElementById('filter-estado-fisico').value;
+            const selectedCondicaoMeteo = document.getElementById('filter-condicao-meteo').value;
+            const selectedBairro = document.getElementById('filter-bairro').value;
+            const selectedSexo = document.getElementById('filter-sexo').value;
+            const selectedFaixaEtaria = document.getElementById('filter-faixa-etaria').value;
+            const selectedCausaAcidente = document.getElementById('filter-causa-acidente').value;
+
+
+            // Aplicar os filtros
+            if (selectedAno !== 'todos') {
+                filteredData = filteredData.filter(item => String(item.ano) === selectedAno);
+            }
+            if (selectedMes !== 'todos') {
+                filteredData = filteredData.filter(item => item.mes_nome.toLowerCase() === selectedMes.toLowerCase());
+            }
+            if (selectedDiaSemana !== 'todos') {
+                filteredData = filteredData.filter(item => item.dia_semana_nome.toLowerCase() === selectedDiaSemana.toLowerCase());
+            }
+            if (selectedFaseDia !== 'todos') {
+                // Ensure to check against potentially inferred value
+                filteredData = filteredData.filter(item => {
+                    let itemFaseDia = safeGet(item, 'fase_dia_acidente');
+                    if (itemFaseDia === 'Não Informado' || !itemFaseDia) {
+                        itemFaseDia = getFaseDiaInferred(safeGet(item, 'hora_limpa', null));
+                    }
+                    return itemFaseDia === selectedFaseDia;
+                });
+            }
+            if (selectedTipoAcidente !== 'todos') {
+                filteredData = filteredData.filter(item => item.tipo_acidente_desc === selectedTipoAcidente);
+            }
+            if (selectedEstadoFisico !== 'todos') {
+                filteredData = filteredData.filter(item => item.estado_fisico_vitima === selectedEstadoFisico);
+            }
+            if (selectedCondicaoMeteo !== 'todos') {
+                filteredData = filteredData.filter(item => item.condicao_clima === selectedCondicaoMeteo);
+            }
+            if (selectedBairro !== 'todos') {
+                filteredData = filteredData.filter(item => item.bairro === selectedBairro);
+            }
+            if (selectedSexo !== 'todos') {
+                filteredData = filteredData.filter(item => item.sexo_vitima === selectedSexo);
+            }
+            if (selectedFaixaEtaria !== 'todos') {
+                filteredData = filteredData.filter(item => item.faixa_etaria === selectedFaixaEtaria);
+            }
+            if (selectedCausaAcidente !== 'todos') {
+                filteredData = filteredData.filter(item => item.causa_principal_acidente === selectedCausaAcidente);
+            }
+
+            console.log("Filtered data length:", filteredData.length);
+            // Re-agregar os dados filtrados
+            aggregatedData = aggregateData(filteredData, currentRawDataUrl);
+            updateDashboard(); // Atualiza os gráficos com os novos dados agregados
+
+            // Carregar dados nos mapas, se a aba de mapas estiver ativa
+            const mapasTab = document.getElementById('mapas');
+            if (mapasTab.classList.contains('active')) {
+                loadMapData(filteredData);
+            }
+        };
+
+        // Função para popular os filtros (usando rawData para obter opções únicas)
+        const populateFilters = (data) => {
+            // Obter valores únicos para cada filtro, filtrando nulos e strings vazias
+            const getUniqueSortedValues = (key, customSort = null) => {
+                let values = [...new Set(data.map(item => safeGet(item, key)).filter(v => v !== null && v !== undefined && v !== ''))];
+                // Remover 'Não Informado' se não houver outros valores válidos ou se for a única opção relevante
+                if (values.length > 1 || (values.length === 1 && values[0] !== 'Não Informado')) {
+                    values = values.filter(v => v !== 'Não Informado');
+                }
+                if (customSort) {
+                    return values.sort(customSort);
+                }
+                return values.sort();
+            };
+
+            const uniqueYears = getUniqueSortedValues('ano');
+            const uniqueMonths = getUniqueSortedValues('mes_nome', (a, b) => {
+                const order = ['janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho', 'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro'];
+                return order.indexOf(a.toLowerCase()) - order.indexOf(b.toLowerCase());
+            });
+            const uniqueDaysOfWeek = getUniqueSortedValues('dia_semana_nome', (a, b) => {
+                const order = ['segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado', 'domingo'];
+                return order.indexOf(a.toLowerCase()) - order.indexOf(b.toLowerCase());
+            });
+            const uniqueFasesDia = getUniqueSortedValues('fase_dia_acidente', (a, b) => {
+                const order = ['Amanhecer', 'Pleno Dia', 'Anoitecer', 'Plena Noite', 'Não Informado'];
+                return order.indexOf(a) - order.indexOf(b);
+            });
+            const uniqueTipoAcidente = getUniqueSortedValues('tipo_acidente_desc');
+            const uniqueEstadoFisico = getUniqueSortedValues('estado_fisico_vitima').filter(value => value !== 'Não Informado'); // Filtra "Não Informado"
+            const uniqueCondicaoMeteo = getUniqueSortedValues('condicao_clima');
+            const uniqueBairros = getUniqueSortedValues('bairro');
+            const uniqueSexos = getUniqueSortedValues('sexo_vitima');
+            const uniqueFaixasEtarias = getUniqueSortedValues('faixa_etaria', (a, b) => {
+                const order = ['0-18', '19-30', '31-45', '46-60', '61+', 'Não Informado'];
+                return order.indexOf(a) - order.indexOf(b);
+            });
+            const uniqueCausasAcidente = getUniqueSortedValues('causa_principal_acidente');
+
+
+            // Função auxiliar para popular um select
+            const fillSelect = (selectId, optionsArray) => {
+                const selectElement = document.getElementById(selectId);
+                selectElement.innerHTML = '<option value="todos">Todos</option>'; // Reset e adicionar 'Todos'
+                optionsArray.forEach(optionValue => {
+                    const option = document.createElement('option');
+                    option.value = optionValue;
+                    option.textContent = optionValue;
+                    selectElement.appendChild(option);
+                });
+            };
+
+            fillSelect('filter-ano', uniqueYears);
+            fillSelect('filter-mes', uniqueMonths);
+            fillSelect('filter-dia-semana', uniqueDaysOfWeek);
+            fillSelect('filter-fase-dia', uniqueFasesDia);
+            fillSelect('filter-tipo-acidente', uniqueTipoAcidente);
+            fillSelect('filter-estado-fisico', uniqueEstadoFisico);
+            fillSelect('filter-condicao-meteo', uniqueCondicaoMeteo);
+            fillSelect('filter-bairro', uniqueBairros);
+            fillSelect('filter-sexo', uniqueSexos);
+            fillSelect('filter-faixa-etaria', uniqueFaixasEtarias);
+            fillSelect('filter-causa-acidente', uniqueCausasAcidente);
+            console.log("Filtros populados.");
+        };
+
+
+        // Navegação e Listeners de Eventos
+        document.addEventListener('DOMContentLoaded', function () {
             const menuItems = document.querySelectorAll('.menu-item');
             const tabContents = document.querySelectorAll('.tab-content');
             const menuToggle = document.getElementById('menu-toggle');
             const sidebar = document.getElementById('sidebar');
-            
-            updateDashboard(); // Update dashboard with embedded data
-            
-            // Tab navigation
+            const dataSourceSelect = document.getElementById('data-source-select');
+
+
+            // --- CARREGA OS DADOS INICIAIS ---
+            loadData(currentRawDataUrl); // Carrega a base de dados padrão ao iniciar
+
+            // Listener para o select de base de dados
+            dataSourceSelect.addEventListener('change', function () {
+                loadData(this.value); // Recarrega os dados com a nova URL
+            });
+
+
+            // Navegação entre abas
             menuItems.forEach(item => {
-                item.addEventListener('click', function() {
+                item.addEventListener('click', function () {
                     menuItems.forEach(i => i.classList.remove('active'));
                     tabContents.forEach(t => t.classList.remove('active'));
                     this.classList.add('active');
-                    document.getElementById(this.getAttribute('data-tab')).classList.add('active');
+                    const targetTabId = this.getAttribute('data-tab');
+                    document.getElementById(targetTabId).classList.add('active');
                     if (window.innerWidth <= 768) {
                         sidebar.classList.remove('active');
                     }
+                    // Adicionar uma chamada para invalidarSize() para o mapa quando a aba 'mapas' for ativada
+                    if (targetTabId === 'mapas') {
+                        // Determine qual mapa está selecionado atualmente e envie a mensagem
+                        const selectedMap = document.getElementById('map-select').value;
+                        const filteredDataForMaps = [...filteredData]; // Já usa filteredData aqui!
+
+                        loadMapData(filteredDataForMaps);
+                        setTimeout(() => { // Pequeno atraso para garantir que o iframe esteja visível
+                            if (selectedMap === 'mapa_acidentes' && document.getElementById('mapa_acidentes').contentWindow) {
+                                document.getElementById('mapa_acidentes').contentWindow.postMessage('invalidateMap', '*');
+                            } else if (selectedMap === 'mapa_calor_acidentes' && document.getElementById('mapa_calor_acidentes').contentWindow) {
+                                document.getElementById('mapa_calor_acidentes').contentWindow.postMessage('invalidateMap', '*');
+                            }
+                        }, 100); // 100ms é um bom valor de atraso
+                    }
                 });
             });
-            
-            // Mobile menu toggle
+
+            // Alternar menu para mobile
             menuToggle.addEventListener('click', () => sidebar.classList.toggle('active'));
-            
+
+            // Event listeners para os botões de filtro
+            const applyFiltersBtn = document.getElementById('apply-filters-btn');
+            const clearFiltersBtn = document.getElementById('clear-filters-btn');
+
+            applyFiltersBtn.addEventListener('click', () => {
+                applyFiltersAndRenderCharts(); // Esta função já é chamada para aplicar os filtros
+                alert('Filtros aplicados!');
+            });
+
+            clearFiltersBtn.addEventListener('click', () => {
+                // Resetar todos os dropdowns para a opção "Todos"
+                document.getElementById('filter-ano').value = 'todos';
+                document.getElementById('filter-mes').value = 'todos';
+                document.getElementById('filter-dia-semana').value = 'todos';
+                document.getElementById('filter-fase-dia').value = 'todos';
+                document.getElementById('filter-tipo-acidente').value = 'todos';
+                document.getElementById('filter-estado-fisico').value = 'todos';
+                document.getElementById('filter-condicao-meteo').value = 'todos';
+                document.getElementById('filter-bairro').value = 'todos';
+                document.getElementById('filter-sexo').value = 'todos';
+                document.getElementById('filter-faixa-etaria').value = 'todos';
+                document.getElementById('filter-causa-acidente').value = 'todos';
+
+                applyFiltersAndRenderCharts(); // Re-render com nenhum filtro aplicado (dados completos)
+                alert('Filtros limpos!');
+            });
+
         });
     </script>
+
+    <script>
+        document.getElementById('map-select').addEventListener('change', function () {
+            const selectedMap = this.value;
+            const mapaAcidentesIframe = document.getElementById('mapa_acidentes');
+            const mapaCalorAcidentesIframe = document.getElementById('mapa_calor_acidentes');
+
+            mapaAcidentesIframe.style.display = selectedMap === 'mapa_acidentes' ? 'block' : 'none';
+            mapaCalorAcidentesIframe.style.display = selectedMap === 'mapa_calor_acidentes' ? 'block' : 'none';
+
+            // Envia a mensagem para o iframe ativo para forçar o redesenho do mapa
+            // e também envia os dados filtrados novamente
+            const filteredDataForMaps = [...filteredData];
+
+
+            if (selectedMap === 'mapa_acidentes' && mapaAcidentesIframe.contentWindow) {
+                mapaAcidentesIframe.contentWindow.postMessage('invalidateMap', '*');
+                mapaAcidentesIframe.contentWindow.postMessage({ type: 'loadMapData', payload: filteredDataForMaps }, '*');
+            } else if (selectedMap === 'mapa_calor_acidentes' && mapaCalorAcidentesIframe.contentWindow) {
+                mapaCalorAcidentesIframe.contentWindow.postMessage('invalidateMap', '*');
+                mapaCalorAcidentesIframe.contentWindow.postMessage({ type: 'loadMapData', payload: filteredDataForMaps }, '*');
+            }
+        });
+    </script>
+
+    <footer class="page-footer">
+        Fonte: Dados da PRF e CTTU adaptados para Recife.
+    </footer>
+
 </body>
+
 </html>
