@@ -17,7 +17,7 @@
             --success-color: #16a34a;
             --background-color: #f8fafc;
             --sidebar-width: 80px;
-            --sidebar-expanded-width: 240px;
+            --sidebar-expanded-width: 260px;
             --header-height: 60px;
             --card-bg: #ffffff;
             --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -153,7 +153,8 @@
         .header h1 {
             color: var(--primary-color);
             font-size: 1.8rem;
-            margin-right: 400px;/* Remover margem padrão */
+            margin-right: 400px;
+            /* Remover margem padrão */
         }
 
         .data-source-selector {
@@ -374,6 +375,7 @@
             background-color: var(--card-bg);
             border-radius: 8px;
             box-shadow: var(--card-shadow);
+
         }
 
         .filter-controls label {
@@ -393,27 +395,71 @@
             color: var(--text-primary);
         }
 
-        .filter-controls button {
-            background-color: var(--primary-color);
+        #apply-filters-btn,
+        #clear-filters-btn {
+            /* cor azul */
+            background-color: var(--secondary-color);
             color: white;
             border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 1rem;
+            box-shadow: var(--card-shadow);
             cursor: pointer;
-            transition: background-color 0.3s ease;
+            transition: all 0.3s ease;
+            margin: 0 10px;
+            min-width: 160px;
         }
 
-        .filter-controls button:hover {
-            background-color: var(--secondary-color);
+        #apply-filters-btn:hover {
+            background-color: #2563eb;
+            transform: translateY(-2px);
         }
 
-        .filter-controls button#clear-filters-btn {
-            background-color: var(--text-secondary);
+        #clear-filters-btn {
+            background-color: var(--danger-color);
         }
 
-        .filter-controls button#clear-filters-btn:hover {
-            background-color: var(--text-primary);
+        #clear-filters-btn:hover {
+            background-color: #b91c1c;
+            transform: translateY(-2px);
         }
+
+
+        .toast {
+            visibility: hidden;
+            min-width: 250px;
+            background-color: var(--success-color);
+            color: white;
+            text-align: center;
+            border-radius: 6px;
+            padding: 16px;
+            position: fixed;
+            z-index: 1001;
+            left: 50%;
+            bottom: 30px;
+            transform: translateX(-50%);
+            font-size: 1rem;
+            box-shadow: var(--card-shadow);
+            opacity: 0;
+            transition: opacity 0.4s ease, bottom 0.4s ease;
+        }
+
+        .toast.show {
+            visibility: visible;
+            opacity: 1;
+            bottom: 50px;
+        }
+
+        .toast.success {
+            background-color: var(--success-color);
+        }
+
+        .toast.error {
+            background-color: var(--danger-color);
+        }
+
 
         .page-footer {
             text-align: center;
@@ -428,6 +474,8 @@
     </style>
 </head>
 
+<div id="toast" class="toast">Filtros aplicados com sucesso!</div>
+
 <body>
     <div class="sidebar" id="sidebar">
         <div class="sidebar-header">
@@ -438,7 +486,11 @@
             <h3>Dashboard Ciclistas</h3>
         </div>
         <div class="sidebar-menu">
-            <div class="menu-item active" data-tab="visao-geral">
+            <div class="menu-item active" data-tab="sobre">
+                <i class="fas fa-info-circle"></i>
+                <span>Sobre</span>
+            </div>
+            <div class="menu-item" data-tab="visao-geral">
                 <i class="fas fa-home"></i>
                 <span data-tab-name-data="Visão Geral" data-tab-name-raw="Panorama Geral">Visão Geral</span>
             </div>
@@ -463,10 +515,6 @@
                 <i class="fas fa-map-marked-alt"></i>
                 <span data-tab-name-data="Mapas" data-tab-name-raw="Mapas">Mapas</span>
             </div>
-            <div class="menu-item" data-tab="filtros">
-                <i class="fas fa-filter"></i>
-                <span data-tab-name-data="Filtros" data-tab-name-raw="Filtros">Filtros</span>
-            </div>
         </div>
     </div>
 
@@ -477,18 +525,137 @@
             </button>
             <div class="header-title-section">
                 <h1>Dashboard de Acidentes com Ciclistas em Recife</h1>
-                <div class="data-source-selector">
-                    <label for="data-source-select">Escolha a base de dados:</label>
-                    <select id="data-source-select">
-                        <option value="data.json">PRF</option>
-                        <option value="raw_acidentes_ciclista_todos_anos.json">CTTU</option>
-                    </select>
-                </div>
             </div>
         </div>
 
-        <div class="tab-content active" id="visao-geral">
+        <div class="tab-content active" id="sobre">
+            <div
+                style="background-color: var(--card-bg); padding: 30px; border-radius: 8px; box-shadow: var(--card-shadow);">
+                <h2 style="color: var(--primary-color); margin-bottom: 20px;">Sobre o Dashboard</h2>
+                <p style="margin-bottom: 1rem;">
+                    Este dashboard interativo apresenta uma análise visual dos <strong>acidentes com ciclistas ocorridos
+                        em Recife</strong>, a partir de diferentes perspectivas como horário, localização, tipo de
+                    acidente, perfil das vítimas, entre outros.
+                </p>
+
+                <h3 style="color: var(--secondary-color); margin-top: 20px;">Fontes de Dados</h3>
+                <p>
+                    - <strong>PRF (Polícia Rodoviária Federal):</strong> acidentes registrados em rodovias federais.<br>
+                    - <strong>CTTU (Autarquia de Trânsito e Transporte Urbano):</strong> registros urbanos detalhados.
+                </p>
+
+                <h3 style="color: var(--secondary-color); margin-top: 20px;">Funcionalidades</h3>
+                <ul style="margin-top: 0.5rem; padding-left: 20px;">
+                    <li>Alternar entre as fontes de dados (PRF e CTTU);</li>
+                    <li>Explorar abas de horários, perfil dos acidentes, vítimas, tendências e mapas;</li>
+                    <li>Aplicar <strong>filtros interativos</strong> para refinar a visualização;</li>
+                    <li>Visualizar mapas com geolocalização dos acidentes (incluindo mapa de calor).</li>
+                </ul>
+
+                <h3 style="color: var(--secondary-color); margin-top: 20px;">Objetivo</h3>
+                <p>
+                    O objetivo do dashboard é fornecer uma ferramenta visual de apoio à análise de segurança viária para
+                    ciclistas, contribuindo com a formulação de políticas públicas, estudos acadêmicos e conscientização
+                    da sociedade.
+                </p>
+
+                <p style="margin-top: 30px; font-size: 0.9rem; color: var(--text-secondary);">
+                    Para mais informações ou sugestões, entre em contato com a equipe responsável.
+                </p>
+                
+            </div>
+        </div>
+
+        <div class="tab-content" id="visao-geral">
+            <div class="header">
+                <h2>Filtros do Dashboard</h2>
+            </div>
+            <div class="filter-controls">
+                <div>
+                    <label for="data-source-select">Base de Dados:</label>
+                    <select id="data-source-select">
+                        <option value="databases/data.json">PRF</option>
+                        <option value="databases/raw_acidentes_ciclista_todos_anos.json">CTTU</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="filter-ano">Ano:</label>
+                    <select id="filter-ano">
+                        <option value="todos">Todos</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="filter-mes">Mês:</label>
+                    <select id="filter-mes">
+                        <option value="todos">Todos</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="filter-dia-semana">Dia da Semana:</label>
+                    <select id="filter-dia-semana">
+                        <option value="todos">Todos</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="filter-fase-dia">Fase do Dia:</label>
+                    <select id="filter-fase-dia">
+                        <option value="todos">Todos</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="filter-tipo-acidente">Tipo de Acidente:</label>
+                    <select id="filter-tipo-acidente">
+                        <option value="todos">Todos</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="filter-estado-fisico">Estado Físico da Vítima:</label>
+                    <select id="filter-estado-fisico">
+                        <option value="todos">Todos</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="filter-condicao-meteo">Condição Climática:</label>
+                    <select id="filter-condicao-meteo">
+                        <option value="todos">Todos</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="filter-bairro">Bairro:</label>
+                    <select id="filter-bairro">
+                        <option value="todos">Todos</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="filter-sexo">Sexo da Vítima:</label>
+                    <select id="filter-sexo">
+                        <option value="todos">Todos</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="filter-faixa-etaria">Faixa Etária da Vítima:</label>
+                    <select id="filter-faixa-etaria">
+                        <option value="todos">Todos</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="filter-causa-acidente">Causa do Acidente:</label>
+                    <select id="filter-causa-acidente">
+                        <option value="todos">Todos</option>
+                    </select>
+                </div>
+            </div>
+            <div style="margin-top: 20px; text-align: center;">
+                <button id="apply-filters-btn">Aplicar Filtros</button>
+                <button id="clear-filters-btn">Limpar Filtros</button>
+            </div>
+            <p style="margin-top: 20px; text-align: center; color: var(--text-secondary);">
+                Os filtros atuam sobre os dados brutos e reprocessam os gráficos.
+            </p>
+            <!-- Separador visual -->
+            <hr style="border: none; height: 1px; background-color: #ccc; margin: 30px 0;">
             <div class="dashboard-content data-json-charts active">
+
                 <div class="kpi-container">
                     <div class="kpi-card">
                         <div class="kpi-title">Total de Acidentes</div>
@@ -831,9 +998,9 @@
                         </div>
 
                         <div id="iframe-container" style="height: 500px;">
-                            <iframe id="mapa_acidentes" src="mapa_acidentes.html" width="100%" height="100%"
+                            <iframe id="mapa_acidentes" src="maps/mapa_acidentes.html" width="100%" height="100%"
                                 style="border:none; border-radius: 8px; display: block;"></iframe>
-                            <iframe id="mapa_calor_acidentes" src="mapa_calor_acidentes.html" width="100%" height="100%"
+                            <iframe id="mapa_calor_acidentes" src="maps/mapa_calor_acidentes.html" width="100%" height="100%"
                                 style="border:none; border-radius: 8px; display: none;"></iframe>
                         </div>
                     </div>
@@ -844,99 +1011,17 @@
             </footer>
         </div>
 
-        <div class="tab-content" id="filtros">
-            <div class="header">
-                <h2>Filtros do Dashboard</h2>
-            </div>
-            <div class="filter-controls">
-                <div>
-                    <label for="filter-ano">Ano:</label>
-                    <select id="filter-ano">
-                        <option value="todos">Todos</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="filter-mes">Mês:</label>
-                    <select id="filter-mes">
-                        <option value="todos">Todos</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="filter-dia-semana">Dia da Semana:</label>
-                    <select id="filter-dia-semana">
-                        <option value="todos">Todos</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="filter-fase-dia">Fase do Dia:</label>
-                    <select id="filter-fase-dia">
-                        <option value="todos">Todos</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="filter-tipo-acidente">Tipo de Acidente:</label>
-                    <select id="filter-tipo-acidente">
-                        <option value="todos">Todos</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="filter-estado-fisico">Estado Físico da Vítima:</label>
-                    <select id="filter-estado-fisico">
-                        <option value="todos">Todos</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="filter-condicao-meteo">Condição Climática:</label>
-                    <select id="filter-condicao-meteo">
-                        <option value="todos">Todos</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="filter-bairro">Bairro:</label>
-                    <select id="filter-bairro">
-                        <option value="todos">Todos</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="filter-sexo">Sexo da Vítima:</label>
-                    <select id="filter-sexo">
-                        <option value="todos">Todos</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="filter-faixa-etaria">Faixa Etária da Vítima:</label>
-                    <select id="filter-faixa-etaria">
-                        <option value="todos">Todos</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="filter-causa-acidente">Causa do Acidente:</label>
-                    <select id="filter-causa-acidente">
-                        <option value="todos">Todos</option>
-                    </select>
-                </div>
-            </div>
-            <div style="margin-top: 20px; text-align: center;">
-                <button id="apply-filters-btn">Aplicar Filtros</button>
-                <button id="clear-filters-btn">Limpar Filtros</button>
-            </div>
-            <p style="margin-top: 20px; text-align: center; color: var(--text-secondary);">
-                Os filtros atuam sobre os dados brutos e reprocessam os gráficos.
-            </p>
-        </div>
-
-
     </div>
 
     <script>
         let rawData = {}; // Variável para armazenar ambos os datasets brutos
         let preprocessedData = {
-            'data.json': [],
-            'raw_acidentes_ciclista_todos_anos.json': []
+            'databases/data.json': [],
+            'databases/raw_acidentes_ciclista_todos_anos.json': []
         };
         let aggregatedData = {}; // Variável para armazenar os dados agregados para os gráficos
         let charts = {}; // Armazena as instâncias dos gráficos
-        let currentRawDataUrl = 'data.json'; // URL inicial dos dados brutos
+        let currentRawDataUrl = 'databases/data.json'; // URL inicial dos dados brutos
 
         // Helper para agrupar e contar
         const groupBy = (array, key) => {
@@ -945,6 +1030,19 @@
                 return result;
             }, {});
         };
+
+        // Função para mostrar um toast de sucesso
+        function showToast(message = "", type = "success") {
+            const toast = document.getElementById("toast");
+            toast.textContent = message;
+
+            toast.classList.remove("success", "error"); // remove classes anteriores
+            toast.classList.add("show", type);
+
+            setTimeout(() => {
+                toast.classList.remove("show");
+            }, 2000);
+        }
 
         // Funções de Inicialização de Gráficos (mantidas como antes)
         const createOrUpdateChart = (ctxId, type, data, options) => {
@@ -986,6 +1084,7 @@
                         dateObj = new Date(datePart + 'T00:00:00'); // Use 'T00:00:00' for consistent parsing as local date
                     } catch (e) {
                         console.error('Error parsing date:', item[dateField], e);
+                        showToast(`Error parsing date: ${item[dateField]}`, "error");
                     }
                 }
 
@@ -1011,13 +1110,14 @@
                     } catch (e) {
                         newItem.hora_limpa = null;
                         console.error('Error parsing hora_limpa:', item.hora_limpa, e);
+                        showToast(`Error parsing hora_limpa: ${item.hora_limpa}`, "error");
                     }
                 } else {
                     newItem.hora_limpa = null;
                 }
 
                 // Specific mappings/standardizations based on source
-                if (sourceName === 'raw_acidentes_ciclista_todos_anos.json') {
+                if (sourceName === 'databases/raw_acidentes_ciclista_todos_anos.json') {
                     newItem.tipo_acidente_desc = safeGet(item, 'tipo');
                     newItem.causa_principal_acidente = safeGet(item, 'natureza_acidente');
                     newItem.condicao_clima = safeGet(item, 'tempo_clima');
@@ -1042,8 +1142,8 @@
                     newItem.latitude = safeGetNumber(item, 'latitude', null);
                     newItem.longitude = safeGetNumber(item, 'longitude', null);
 
-                } else if (sourceName === 'data.json') {
-                    // These fields are already well-defined in data.json based on prior processing
+                } else if (sourceName === 'databases/data.json') {
+                    // These fields are already well-defined in databases/data.json based on prior processing
                     newItem.tipo_acidente_desc = safeGet(item, 'tipo_acidente_desc');
                     newItem.causa_principal_acidente = safeGet(item, 'causa_principal_acidente');
                     newItem.condicao_clima = safeGet(item, 'condicao_clima');
@@ -1057,7 +1157,7 @@
                     newItem.vitimas_feridos_graves = safeGetNumber(item, 'vitimas_feridos_graves');
                     newItem.vitimas_total_nao_fatais = newItem.vitimas_feridos_leves + newItem.vitimas_feridos_graves;
 
-                    // Ensure latitude/longitude for data.json - assuming it exists or can be set to null
+                    // Ensure latitude/longitude for databases/data.json - assuming it exists or can be set to null
                     newItem.latitude = safeGetNumber(item, 'latitude', null);
                     newItem.longitude = safeGetNumber(item, 'longitude', null);
                 }
@@ -1108,7 +1208,7 @@
                     horario_critico_map[hour] = (horario_critico_map[hour] || 0) + 1;
                 }
 
-                if (sourceName === 'data.json') {
+                if (sourceName === 'databases/data.json') {
                     const vitimasMortas = safeGetNumber(item, 'vitimas_mortas');
                     const vitimasFeridosLeves = safeGetNumber(item, 'vitimas_feridos_leves');
                     const vitimasFeridosGraves = safeGetNumber(item, 'vitimas_feridos_graves');
@@ -1118,7 +1218,7 @@
                     }
                     lesoes_graves_count += (vitimasFeridosLeves + vitimasFeridosGraves);
 
-                } else if (sourceName === 'raw_acidentes_ciclista_todos_anos.json') {
+                } else if (sourceName === 'databases/raw_acidentes_ciclista_todos_anos.json') {
                     const vitimasMortasRaw = safeGetNumber(item, 'vitimas_mortas');
                     const vitimasNaoFataisRaw = safeGetNumber(item, 'vitimas_total_nao_fatais');
 
@@ -1130,10 +1230,10 @@
                 }
             });
 
-            if (sourceName === 'data.json') {
+            if (sourceName === 'databases/data.json') {
                 currentAggregatedData.kpis.obitos = obitos_count;
                 currentAggregatedData.kpis.lesoes_graves = lesoes_graves_count;
-            } else { // raw_acidentes_ciclista_todos_anos.json
+            } else { // databases/raw_acidentes_ciclista_todos_anos.json
                 currentAggregatedData.kpis.acidentes_fatais_raw = vitimas_fatais_raw_count;
                 currentAggregatedData.kpis.acidentes_nao_fatais_raw = vitimas_nao_fatais_raw_count;
             }
@@ -1150,7 +1250,7 @@
 
 
             // General Aggregations (common for both or adapted)
-            // Evolução Mensal (for data.json) and Evolução Anual (for raw_acidentes_ciclista_todos_anos.json)
+            // Evolução Mensal (for databases/data.json) and Evolução Anual (for databases/raw_acidentes_ciclista_todos_anos.json)
             const evolucaoMensalMap = {};
             const evolucaoAnualMap = {};
             dataToAggregate.forEach(item => {
@@ -1167,7 +1267,7 @@
             currentAggregatedData.evolucao_mensal = Object.keys(evolucaoMensalMap).sort().map(key => ({ mes: key, contagem: evolucaoMensalMap[key] }));
             currentAggregatedData.evolucao_anual = Object.keys(evolucaoAnualMap).sort().map(key => ({ ano: String(key), contagem: evolucaoAnualMap[key] }));
 
-            // Top Bairros (for raw_acidentes_ciclista_todos_anos.json)
+            // Top Bairros (for databases/raw_acidentes_ciclista_todos_anos.json)
             const topBairrosMap = {};
             dataToAggregate.forEach(item => {
                 const bairro = safeGet(item, 'bairro');
@@ -1191,9 +1291,9 @@
             const estadoFisicoMap = {};
             // Prefer order for display, handle 'Lesões' and separate 'Lesões Leves'/'Lesões Graves'
             let statesToProcess = [];
-            if (sourceName === 'data.json') {
+            if (sourceName === 'databases/data.json') {
                 statesToProcess = ["Lesões Leves", "Lesões Graves", "Óbito", "Ileso", "Não Informado"];
-            } else { // raw_acidentes_ciclista_todos_anos.json
+            } else { // databases/raw_acidentes_ciclista_todos_anos.json
                 statesToProcess = ["Lesões", "Óbito", "Ileso", "Não Informado"];
             }
 
@@ -1340,9 +1440,9 @@
             Object.keys(comparativoAnualMap).sort().forEach(year => {
                 // Ensure expected states are present based on the source
                 let statesForYear = [];
-                if (sourceName === 'data.json') {
+                if (sourceName === 'databases/data.json') {
                     statesForYear = ["Lesões Leves", "Lesões Graves", "Óbito", "Ileso"];
-                } else { // raw_acidentes_ciclista_todos_anos.json
+                } else { // databases/raw_acidentes_ciclista_todos_anos.json
                     statesForYear = ["Lesões", "Óbito", "Ileso"];
                 }
 
@@ -1365,7 +1465,7 @@
                 }
             });
 
-            // Acidentes Fatais vs Não Fatais (for raw_acidentes_ciclista_todos_anos.json)
+            // Acidentes Fatais vs Não Fatais (for databases/raw_acidentes_ciclista_todos_anos.json)
             const fataisNaoFataisMap = { 'Fatais': 0, 'Não Fatais': 0 };
             dataToAggregate.forEach(item => {
                 fataisNaoFataisMap['Fatais'] += safeGetNumber(item, 'vitimas_mortas');
@@ -1499,7 +1599,7 @@
                 return;
             }
 
-            if (currentRawDataUrl === 'data.json') {
+            if (currentRawDataUrl === 'databases/data.json') {
                 document.querySelectorAll('.data-json-charts').forEach(el => el.classList.add('active'));
                 updateKPIs(); // Usa os KPIs originais
                 updateEvolucaoMensalChart();
@@ -1519,7 +1619,7 @@
                 updateEvolucaoAnualChart();
                 updateDistribuicaoMensalChart();
                 updateComparativoAnualChart();
-            } else if (currentRawDataUrl === 'raw_acidentes_ciclista_todos_anos.json') {
+            } else if (currentRawDataUrl === 'databases/raw_acidentes_ciclista_todos_anos.json') {
                 document.querySelectorAll('.raw-json-charts').forEach(el => el.classList.add('active'));
                 updateKPIsRaw();
                 // Visão Geral / Panorama Geral
@@ -1852,7 +1952,7 @@
             createOrUpdateChart('comparativoAnualChart', 'bar', chartData, { responsive: true, maintainAspectRatio: false, scales: { x: { stacked: true }, y: { stacked: true } } });
         };
 
-        // --- Novas Funções de Gráficos para raw_acidentes_ciclista_todos_anos.json ---
+        // --- Novas Funções de Gráficos para databases/raw_acidentes_ciclista_todos_anos.json ---
 
         // 📊 Aba: Visão Geral (Panorama Geral)
         const updateRawVisaoGeralAnoChart = () => {
@@ -2216,8 +2316,8 @@
 
                 })
                 .catch(error => {
-                    console.error('Erro ao carregar os dados:', error);
-                    alert(`Não foi possível carregar os dados de ${url}. Verifique o arquivo JSON ou o console para mais detalhes.`);
+                    showToast(`Erro ao carregar os dados: ${error}`, "error");
+                    showToast(`Não foi possível carregar os dados de ${url}. Verifique o arquivo JSON ou o console para mais detalhes.`, "error");
                 });
         };
 
@@ -2245,7 +2345,7 @@
                 const hideForRaw = item.getAttribute('data-hide-for-raw') === 'true';
 
                 if (span) {
-                    if (sourceUrl === 'raw_acidentes_ciclista_todos_anos.json') {
+                    if (sourceUrl === 'databases/raw_acidentes_ciclista_todos_anos.json') {
                         // Se for para esconder no dataset raw
                         if (hideForRaw) {
                             item.style.display = 'none'; // Esconde o item de menu
@@ -2257,8 +2357,8 @@
                         if (rawName) {
                             span.textContent = rawName;
                         }
-                    } else { // Default to data.json names
-                        item.style.display = 'flex'; // Garante que o item esteja visível para data.json
+                    } else { // Default to databases/data.json names
+                        item.style.display = 'flex'; // Garante que o item esteja visível para databases/data.json
                         const dataName = span.getAttribute('data-tab-name-data');
                         if (dataName) {
                             span.textContent = dataName;
@@ -2348,6 +2448,8 @@
             if (mapasTab.classList.contains('active')) {
                 loadMapData(filteredData);
             }
+
+
         };
 
         // Função para popular os filtros (usando rawData para obter opções únicas)
@@ -2429,9 +2531,10 @@
             // --- CARREGA OS DADOS INICIAIS ---
             loadData(currentRawDataUrl); // Carrega a base de dados padrão ao iniciar
 
-            // Listener para o select de base de dados
+            //Listener para o select de base de dados
             dataSourceSelect.addEventListener('change', function () {
-                loadData(this.value); // Recarrega os dados com a nova URL
+                loadData(this.value);
+                showToast("Base de dados alterada com sucesso!", "success");
             });
 
 
@@ -2468,12 +2571,12 @@
             menuToggle.addEventListener('click', () => sidebar.classList.toggle('active'));
 
             // Event listeners para os botões de filtro
-            const applyFiltersBtn = document.getElementById('apply-filters-btn');
             const clearFiltersBtn = document.getElementById('clear-filters-btn');
+            const applyFiltersBtn = document.getElementById('apply-filters-btn')
 
             applyFiltersBtn.addEventListener('click', () => {
                 applyFiltersAndRenderCharts(); // Esta função já é chamada para aplicar os filtros
-                alert('Filtros aplicados!');
+                showToast("Filtros aplicados com sucesso!", "success");
             });
 
             clearFiltersBtn.addEventListener('click', () => {
@@ -2491,7 +2594,7 @@
                 document.getElementById('filter-causa-acidente').value = 'todos';
 
                 applyFiltersAndRenderCharts(); // Re-render com nenhum filtro aplicado (dados completos)
-                alert('Filtros limpos!');
+                showToast("Filtros resetados com sucesso!", "success");
             });
 
         });
