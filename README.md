@@ -3,7 +3,7 @@
 **Alunos: Eduardo Felipe e Sonael Neto**  
 **Tecnologias utilizadas: 🐍 Python | 🌐 HTML | 🎨 CSS**
 
-Este projeto tem como objetivo analisar dados de acidentes de trânsito envolvendo ciclistas no município de Recife, com base nos arquivos CSV disponibilizados pelo portal de dados abertos da PRF (Polícia Rodoviária Federal). A partir desses dados, foi possível gerar gráficos e informações relevantes, apresentados por meio de um **dashboard interativo**.
+Este projeto tem como objetivo analisar dados de acidentes de trânsito envolvendo ciclistas no município de Recife, com base nos arquivos CSV disponibilizados pelo portal de dados abertos da PRF (Polícia Rodoviária Federal) no Portal de Dados Abertos da Prefeitura do Recife. A partir desses dados, foi possível gerar gráficos e informações relevantes, apresentados por meio de um **dashboard interativo**.
 
 ---
 
@@ -26,7 +26,7 @@ O dashboard apresenta:
 - Comparativos por ano e condições climáticas
 
 Link para o dashboard:
-- https://sonael.github.io/Analise_Dados_Acidentes/dashboard.html
+- https://sonael.github.io/Analise_Dados_Acidentes/dashboard_v4.html
 
 ## 📌 Objetivo do Estudo
 
@@ -34,8 +34,11 @@ Investigar se existe uma **correlação entre a ocorrência de acidentes graves 
 
 ## 🔗 Fonte dos Dados
 
-Os dados utilizados foram obtidos diretamente do portal oficial da PRF:  
+Portal oficial da PRF:  
 [https://www.gov.br/prf/pt-br/acesso-a-informacao/dados-abertos](https://www.gov.br/prf/pt-br/acesso-a-informacao/dados-abertos)
+
+Portal de Dados Abertos da Prefeitura do Recife:  
+http://192.207.206.133/pt_PT/dataset/acidentes-de-transito-com-e-sem-vitimas
 
 ## 📃 Licença
 
